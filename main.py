@@ -3,7 +3,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 # ВСТАВ СВІЙ API КЛЮЧ
-GEMINI_KEY = "AIzaSyAlhwZJJIdismq50Rcm9SewOLQE2N28OK4" 
+GEMINI_KEY = "AIzaSyCdn7MuaGoPhBM0fCB3VadHQJBb9Jx0yMo" 
 genai.configure(api_key=GEMINI_KEY)
 
 # Використовуємо модель, яка ТОЧНО є у твоєму списку:
