@@ -3,42 +3,41 @@ import google.generativeai as genai
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
-# Забираємо ключ із Variables Railway
+# Забираємо ключ
 GEMINI_KEY = os.environ.get("GEMINI_KEY")
 
 if GEMINI_KEY:
+    # Примусово налаштовуємо клієнт
     genai.configure(api_key=GEMINI_KEY)
-    # Використовуємо СТАНДАРТНУ модель
+    # Спробуємо створити модель БЕЗ вказання версії в об'єкті, 
+    # бібліотека сама має обрати v1 для платних акаунтів
     model = genai.GenerativeModel('gemini-1.5-flash')
 else:
-    print("CRITICAL ERROR: GEMINI_KEY is missing!")
+    print("GEMINI_KEY is missing")
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/")
 async def health():
-    return {"status": "v20.0 PRO STABLE"}
+    return {"status": "v21.0 Final Push"}
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
     try:
         img_data = await file.read()
         
-        # Запит до ШІ
+        # Використовуємо метод generate_content
         response = model.generate_content([
-            "Ти дієтолог. Опиши страву на фото українською: назва, приблизна вага, калорії. Будь коротким.",
+            "Опиши цю їжу українською: назва, вага, калорії.",
             {"mime_type": "image/jpeg", "data": img_data}
         ])
         
-        if response.text:
-            return {"result": response.text}
-        else:
-            return {"result": "ШІ не зміг розпізнати фото. Спробуйте інший ракурс."}
+        return {"result": response.text}
             
     except Exception as e:
-        # Це допоможе нам зрозуміти, якщо ключ все ще не "підхопився"
-        return {"result": f"Помилка конфігурації: {str(e)}"}
+        # Якщо знову помилка, виведемо ТИП помилки для діагностики
+        return {"result": f"Помилка {type(e).__name__}: {str(e)}"}
 
 if __name__ == "__main__":
     import uvicorn
