@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitLio AI</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
+        .btn { background: #4CAF50; color: white; border: none; padding: 20px; border-radius: 15px; font-size: 18px; width: 100%; margin-top: 30px; font-weight: bold; }
+        #res { margin-top: 20px; background: #222; padding: 15px; border-radius: 10px; display: none; line-height: 1.5; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h2>FitLio AI 🥗</h2>
+    <button class="btn" onclick="takePhoto()">📸 СКАНУВАТИ СТРАВУ</button>
+    <div id="res"></div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        async function takePhoto() {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = 'image/*'; input.capture = 'camera';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                const out = document.getElementById('res');
+                out.style.display = 'block';
+                out.innerText = "⏳ Аналізую страву...";
+                
+                const fd = new FormData();
+                fd.append('file', file);
+                
+                try {
+                    // ТУТ ВАЖЛИВО: перевір адресу Railway після деплою
+                    const r = await fetch('https://web-production-b2d37.up.railway.app/analyze', {
+                        method: 'POST', body: fd
+                    });
+                    const d = await r.json();
+                    out.innerText = d.result || "Помилка аналізу";
+                } catch (err) {
+                    out.innerText = "Сервер Railway не відповідає. Перевір статус деплою.";
+                }
+            };
+            input.click();
+        }
+    </script>
+</body>
+</html>
