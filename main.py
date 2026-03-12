@@ -1,23 +1,24 @@
-import os, google.generativeai as genai
+import os
+import google.generativeai as genai
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
-# Отримуємо ключ із налаштувань Railway
+# Забираємо ключ із Variables Railway
 GEMINI_KEY = os.environ.get("GEMINI_KEY")
 
 if GEMINI_KEY:
     genai.configure(api_key=GEMINI_KEY)
-    # Використовуємо -latest версію, вона найстабільніша для Paid Tier
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    # Використовуємо СТАНДАРТНУ модель
+    model = genai.GenerativeModel('gemini-1.5-flash')
 else:
-    print("Error: GEMINI_KEY not found in environment variables")
+    print("CRITICAL ERROR: GEMINI_KEY is missing!")
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/")
 async def health():
-    return {"status": "v19.0 Pro Online"}
+    return {"status": "v20.0 PRO STABLE"}
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
@@ -26,15 +27,18 @@ async def analyze(file: UploadFile = File(...)):
         
         # Запит до ШІ
         response = model.generate_content([
-            "Опиши страву українською: назва, приблизна вага та калорії. Будь дуже коротким.",
+            "Ти дієтолог. Опиши страву на фото українською: назва, приблизна вага, калорії. Будь коротким.",
             {"mime_type": "image/jpeg", "data": img_data}
         ])
         
-        return {"result": response.text}
-    
+        if response.text:
+            return {"result": response.text}
+        else:
+            return {"result": "ШІ не зміг розпізнати фото. Спробуйте інший ракурс."}
+            
     except Exception as e:
-        # Якщо знову 404, спробуємо дати підказку, що саме не так
-        return {"result": f"Помилка доступу до Google AI: {str(e)}"}
+        # Це допоможе нам зрозуміти, якщо ключ все ще не "підхопився"
+        return {"result": f"Помилка конфігурації: {str(e)}"}
 
 if __name__ == "__main__":
     import uvicorn
