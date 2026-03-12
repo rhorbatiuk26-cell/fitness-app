@@ -3,7 +3,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 # Налаштування Gemini
-GEMINI_KEY = "AIzaSyCLkf-FdSM5lJWlnvl3GiQZp0aLJ4-sxhA"
+GEMINI_KEY = "AIzaSyD7hZP32yHw6hqSiO-LxOoWbO2YsyzYYYA"
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
