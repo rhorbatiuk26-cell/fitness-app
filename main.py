@@ -2,33 +2,33 @@ import os, google.generativeai as genai
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
-# Налаштування Gemini
-GEMINI_KEY = "AIzaSyD7hZP32yHw6hqSiO-LxOoWbO2YsyzYYYA"
+# ВСТАВ СВІЙ НОВИЙ API КЛЮЧ ТУТ
+GEMINI_KEY = "AIzaSyAlhwZJJIdismq50Rcm9SewOLQE2N28OK4" # Переконайся, що ключ актуальний!
 genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+
+# Використовуємо більш стабільну назву моделі
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 app = FastAPI()
-
-# Дозволяємо Mini App підключатися до сервера
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/")
 async def health():
-    return {"status": "v9.0 Online"}
+    return {"status": "v10.0 Online"}
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
-    img_data = await file.read()
-    response = model.generate_content([
-        "Опиши страву українською: назва, приблизна вага та калорії. Будь дуже коротким.",
-        {"mime_type": "image/jpeg", "data": img_data}
-    ])
-    return {"result": response.text}
+    try:
+        img_data = await file.read()
+        # Додаємо трохи магії для стабільності
+        response = model.generate_content([
+            "Опиши страву українською: назва, приблизна вага та калорії.",
+            {"mime_type": "image/jpeg", "data": img_data}
+        ])
+        return {"result": response.text}
+    except Exception as e:
+        # Тепер ми побачимо помилку в Mini App, якщо вона виникне
+        return {"result": f"Помилка ШІ: {str(e)}"}
 
 if __name__ == "__main__":
     import uvicorn
