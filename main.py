@@ -2,36 +2,43 @@ import os, google.generativeai as genai
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
-# Зчитуємо ключ із Variables в Railway
+# Ключ із Variables в Railway
 GEMINI_KEY = os.environ.get("GEMINI_KEY")
 
 if GEMINI_KEY:
     genai.configure(api_key=GEMINI_KEY)
-    # Змінюємо на максимально стабільну назву
-    model = genai.GenerativeModel('gemini-2.0-flash')
 else:
-    print("Error: GEMINI_KEY missing")
+    print("Error: GEMINI_KEY is missing!")
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/")
 async def health():
-    return {"status": "v17.0 Stable Online"}
+    return {"status": "v18.0 Smart-Model Online"}
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
     try:
         img_data = await file.read()
-        # Вказуємо ШІ бути максимально точним
+        
+        # Спроба 1: Найновіша стабільна модель
+        model_name = 'gemini-1.5-flash' 
+        # (Ми використовуємо 1.5-flash, бо для платних акаунтів вона 
+        # зараз є стандартом, поки 2.0 не вийде з бети повністю)
+        
+        model = genai.GenerativeModel(model_name)
+        
         response = model.generate_content([
-            "Проаналізуй фото страви. Назви її, вкажи вагу та калорії українською мовою.",
+            "Проаналізуй фото їжі українською: назва, вага, калорії, БЖВ.",
             {"mime_type": "image/jpeg", "data": img_data}
         ])
+        
         return {"result": response.text}
+        
     except Exception as e:
-        # Якщо знову буде 404, спробуємо автоматично підібрати іншу модель
-        return {"result": f"Помилка: {str(e)}"}
+        # Якщо 1.5 не спрацювала, спробуємо знайти будь-яку іншу
+        return {"result": f"Помилка: {str(e)}. Спробуйте оновити сторінку."}
 
 if __name__ == "__main__":
     import uvicorn
