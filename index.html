@@ -3,76 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitLio AI Pro</title>
+    <title>FitLio AI</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg: #f0f2f5;
-            --card: #ffffff;
-            --text: #1c1c1e;
-            --subtext: #8e8e93;
-            --accent: #34c759;
-            --water: #007aff;
-        }
-        body {
-            font-family: -apple-system, system-ui, sans-serif;
-            background: var(--bg); color: var(--text);
-            margin: 0; padding: 15px 15px 110px 15px;
-        }
-
-        /* ШІ Порада */
-        .ai-bubble {
-            background: #e9f5ff; border-radius: 18px; padding: 15px;
-            margin-bottom: 20px; border-left: 5px solid var(--water);
-            font-size: 14px; line-height: 1.4; position: relative;
-        }
-
-        /* Головний блок Калорій */
-        .main-stats {
-            background: var(--card); border-radius: 28px; padding: 25px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            display: flex; flex-direction: column; align-items: center; margin-bottom: 15px;
-        }
+        :root { --bg: #f0f2f5; --card: #ffffff; --text: #1c1c1e; --sub: #8e8e93; --accent: #34c759; --water: #007aff; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px 15px 120px; }
+        .ai-bubble { background: #e9f5ff; border-radius: 18px; padding: 15px; margin-bottom: 20px; border-left: 5px solid var(--water); font-size: 14px; }
+        .main-stats { background: var(--card); border-radius: 28px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
         .progress-box { position: relative; width: 180px; height: 180px; }
         svg { transform: rotate(-90deg); width: 180px; height: 180px; }
-        circle { fill: none; stroke-width: 14; stroke-linecap: round; }
+        circle { fill: none; stroke-width: 14; stroke-linecap: round; transition: 1s ease; }
         .bg-circle { stroke: #eee; }
-        .bar-circle { stroke: var(--accent); transition: 1s ease; }
-        .kcal-info {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center;
-        }
-
-        /* Блок БЖВ */
+        .bar-circle { stroke: var(--accent); stroke-dasharray: 502; stroke-dashoffset: 502; }
+        .kcal-info { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
         .macros { display: flex; justify-content: space-around; width: 100%; margin-top: 20px; }
         .macro-item { text-align: center; }
-        .macro-val { font-weight: bold; display: block; }
-        .macro-label { font-size: 11px; color: var(--subtext); }
-
-        /* Кнопки Дій */
-        .grid-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .action-card {
-            background: var(--card); border-radius: 20px; padding: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.03); text-align: center;
-            cursor: pointer; transition: 0.2s;
-        }
+        .macro-val { font-weight: bold; display: block; font-size: 16px; }
+        .macro-label { font-size: 11px; color: var(--sub); }
+        .grid-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .action-card { background: var(--card); border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.03); cursor: pointer; transition: 0.2s; }
         .action-card:active { transform: scale(0.95); }
-        .action-card.progress { grid-column: span 2; background: linear-gradient(135deg, #34c759, #248a3d); color: white; }
-
-        /* Кнопка Води */
-        .water-btn { color: var(--water); font-weight: bold; }
-
-        /* Нижня панель */
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            padding: 20px; background: rgba(240, 242, 245, 0.8);
-            backdrop-filter: blur(10px); z-index: 100;
-        }
-        .btn-scan {
-            background: var(--text); color: white; padding: 18px;
-            border-radius: 22px; text-align: center; font-weight: bold;
-            font-size: 16px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
+        .action-card.full { grid-column: span 2; background: linear-gradient(135deg, #34c759, #248a3d); color: white; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; padding: 20px; background: rgba(240,242,245,0.8); backdrop-filter: blur(10px); }
+        .btn-scan { background: var(--text); color: white; padding: 18px; border-radius: 22px; text-align: center; font-weight: bold; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         input { display: none; }
     </style>
 </head>
@@ -80,39 +33,37 @@
 
     <div class="ai-bubble">
         <b>🤖 ШІ Порада:</b><br>
-        <span id="aiAdvice">Завантажте фото страви, щоб я міг проаналізувати ваш раціон.</span>
+        <span id="aiAdvice">Натисніть кнопку нижче, щоб додати перший прийом їжі!</span>
     </div>
 
     <div class="main-stats">
         <div class="progress-box">
             <svg><circle class="bg-circle" cx="90" cy="90" r="80"></circle>
-                 <circle id="bar" class="bar-circle" cx="90" cy="90" r="80" stroke-dasharray="502" stroke-dashoffset="502"></circle></svg>
+                 <circle id="bar" class="bar-circle" cx="90" cy="90" r="80"></circle></svg>
             <div class="kcal-info">
                 <div id="totalKcal" style="font-size: 32px; font-weight: 800;">0</div>
-                <div style="font-size: 12px; color: var(--subtext);">з 2100 ккал</div>
+                <div style="font-size: 12px; color: var(--sub);">з 2100 ккал</div>
             </div>
         </div>
         <div class="macros">
-            <div class="macro-item"><span class="macro-val" style="color:#ff9500">0г</span><span class="macro-label">Білки</span></div>
-            <div class="macro-item"><span class="macro-val" style="color:#ffcc00">0г</span><span class="macro-label">Жири</span></div>
-            <div class="macro-item"><span class="macro-val" style="color:#5856d6">0г</span><span class="macro-label">Вугл.</span></div>
+            <div class="macro-item"><span id="valP" class="macro-val" style="color:#ff9500">0г</span><span class="macro-label">Білки</span></div>
+            <div class="macro-item"><span id="valF" class="macro-val" style="color:#ffcc00">0г</span><span class="macro-label">Жири</span></div>
+            <div class="macro-item"><span id="valC" class="macro-val" style="color:#5856d6">0г</span><span class="macro-label">Вугл.</span></div>
         </div>
     </div>
 
     <div class="grid-buttons">
-        <div class="action-card progress">
+        <div class="action-card full">
             <span style="font-size: 18px; font-weight: bold;">📈 Мій прогрес</span>
-            <div style="font-size: 12px; opacity: 0.8;">Статистика за тиждень</div>
         </div>
         <div class="action-card" onclick="addWater()">
             <div style="font-size: 24px;">💧</div>
-            <div class="water-btn">+250 мл</div>
-            <div id="waterTotal" style="font-size: 12px; color: var(--subtext);">Всього: 0л</div>
+            <div style="color: var(--water); font-weight: bold;">+250 мл</div>
+            <div id="waterTotal" style="font-size: 12px; color: var(--sub);">Всього: 0л</div>
         </div>
         <div class="action-card">
             <div style="font-size: 24px;">💬</div>
             <div style="font-weight: bold;">Чат з ШІ</div>
-            <div style="font-size: 12px; color: var(--subtext);">Запитати пораду</div>
         </div>
     </div>
 
@@ -123,26 +74,42 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.headerColor = "#f0f2f5";
-        tg.backgroundColor = "#f0f2f5";
+        const uid = tg.initDataUnsafe.user?.id || "test_user";
+        const API = "ТВОЯ_АДРЕСА_RAILWAY"; // ЗАМІНИ НА СВОЮ!
 
-        let water = 0;
-        function addWater() {
-            water += 0.25;
-            document.getElementById('waterTotal').innerText = `Всього: ${water.toFixed(2)}л`;
-            tg.HapticFeedback.impactOccurred('light');
-        }
-
-        // Логіка оновлення прогресу (тепер з БЖВ)
-        function updateUI(kcal, p, f, c) {
-            document.getElementById('totalKcal').innerText = kcal;
-            const circleLen = 502;
-            const offset = circleLen - (circleLen * kcal / 2100);
+        async function loadStats() {
+            const r = await fetch(`${API}/stats?user_id=${uid}`);
+            const d = await r.json();
+            
+            document.getElementById('totalKcal').innerText = d.kcal;
+            document.getElementById('valP').innerText = d.p + 'г';
+            document.getElementById('valF').innerText = d.f + 'г';
+            document.getElementById('valC').innerText = d.c + 'г';
+            document.getElementById('waterTotal').innerText = `Всього: ${d.water}л`;
+            
+            const offset = 502 - (502 * d.kcal / 2100);
             document.getElementById('bar').style.strokeDashoffset = Math.max(0, offset);
         }
 
-        // Тут будуть твої запити до Railway (API)...
+        async function addWater() {
+            await fetch(`${API}/add_water?user_id=${uid}&amount=0.25`, {method: 'POST'});
+            tg.HapticFeedback.impactOccurred('medium');
+            loadStats();
+        }
+
+        async function upload() {
+            const file = document.getElementById('file').files[0];
+            const btn = document.querySelector('.btn-scan');
+            btn.innerText = "⏳ АНАЛІЗУЮ...";
+            const fd = new FormData();
+            fd.append('file', file);
+            await fetch(`${API}/analyze?user_id=${uid}`, { method: 'POST', body: fd });
+            btn.innerText = "📸 СКАНУВАТИ СТРАВУ";
+            loadStats();
+        }
+
+        loadStats();
+        tg.expand();
     </script>
 </body>
 </html>
