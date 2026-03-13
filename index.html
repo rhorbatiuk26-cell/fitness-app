@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitLio AI</title>
+    <title>FitLio AI Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --bg: #f0f2f5; --card: #ffffff; --text: #1c1c1e; --sub: #8e8e93; --accent: #34c759; --water: #007aff; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px 15px 120px; }
-        .ai-bubble { background: #e9f5ff; border-radius: 18px; padding: 15px; margin-bottom: 20px; border-left: 5px solid var(--water); font-size: 14px; }
+        
+        .ai-bubble { background: #e9f5ff; border-radius: 18px; padding: 15px; margin-bottom: 20px; border-left: 5px solid var(--water); font-size: 14px; transition: 0.3s; }
         .main-stats { background: var(--card); border-radius: 28px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
         .progress-box { position: relative; width: 180px; height: 180px; }
         svg { transform: rotate(-90deg); width: 180px; height: 180px; }
@@ -21,19 +22,25 @@
         .macro-val { font-weight: bold; display: block; font-size: 16px; }
         .macro-label { font-size: 11px; color: var(--sub); }
         .grid-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .action-card { background: var(--card); border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.03); cursor: pointer; transition: 0.2s; }
-        .action-card:active { transform: scale(0.95); }
+        .action-card { background: var(--card); border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.03); cursor: pointer; }
         .action-card.full { grid-column: span 2; background: linear-gradient(135deg, #34c759, #248a3d); color: white; }
+
+        /* Стилі для вікна чату */
+        #chatBox { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 1000; padding: 20px; flex-direction: column; }
+        #chatMessages { flex: 1; overflow-y: auto; margin-bottom: 20px; font-size: 14px; }
+        .chat-input-area { display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #ddd; }
+        
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; padding: 20px; background: rgba(240,242,245,0.8); backdrop-filter: blur(10px); }
-        .btn-scan { background: var(--text); color: white; padding: 18px; border-radius: 22px; text-align: center; font-weight: bold; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        input { display: none; }
+        .btn-scan { background: var(--text); color: white; padding: 18px; border-radius: 22px; text-align: center; font-weight: bold; }
+        input[type="file"] { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="ai-bubble">
+    <div class="ai-bubble" id="aiAdviceBox">
         <b>🤖 ШІ Порада:</b><br>
-        <span id="aiAdvice">Натисніть кнопку нижче, щоб додати перший прийом їжі!</span>
+        <span id="aiAdvice">Завантажую пораду...</span>
     </div>
 
     <div class="main-stats">
@@ -53,17 +60,20 @@
     </div>
 
     <div class="grid-buttons">
-        <div class="action-card full">
-            <span style="font-size: 18px; font-weight: bold;">📈 Мій прогрес</span>
+        <div class="action-card full">📈 Мій прогрес</div>
+        <div class="action-card" onclick="addWater()">💧 <br> <span style="color:var(--water)">+250 мл</span><br><small id="waterTotal">0л</small></div>
+        <div class="action-card" onclick="openChat()">💬 <br> Чат з ШІ</div>
+    </div>
+
+    <div id="chatBox">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>Чат з Тренером</h3>
+            <button onclick="closeChat()" style="border:none; background:none; font-size:24px;">×</button>
         </div>
-        <div class="action-card" onclick="addWater()">
-            <div style="font-size: 24px;">💧</div>
-            <div style="color: var(--water); font-weight: bold;">+250 мл</div>
-            <div id="waterTotal" style="font-size: 12px; color: var(--sub);">Всього: 0л</div>
-        </div>
-        <div class="action-card">
-            <div style="font-size: 24px;">💬</div>
-            <div style="font-weight: bold;">Чат з ШІ</div>
+        <div id="chatMessages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Ваше питання...">
+            <button onclick="sendMessage()" style="padding: 10px 20px; background: var(--accent); color: white; border: none; border-radius: 12px;">🡪</button>
         </div>
     </div>
 
@@ -80,15 +90,17 @@
         async function loadStats() {
             const r = await fetch(`${API}/stats?user_id=${uid}`);
             const d = await r.json();
-            
             document.getElementById('totalKcal').innerText = d.kcal;
-            document.getElementById('valP').innerText = d.p + 'г';
-            document.getElementById('valF').innerText = d.f + 'г';
-            document.getElementById('valC').innerText = d.c + 'г';
+            document.getElementById('valP').innerText = d.p+'г';
+            document.getElementById('valF').innerText = d.f+'г';
+            document.getElementById('valC').innerText = d.c+'г';
             document.getElementById('waterTotal').innerText = `Всього: ${d.water}л`;
-            
             const offset = 502 - (502 * d.kcal / 2100);
             document.getElementById('bar').style.strokeDashoffset = Math.max(0, offset);
+
+            const adv = await fetch(`${API}/get_advice?user_id=${uid}`);
+            const advData = await adv.json();
+            document.getElementById('aiAdvice').innerText = advData.advice;
         }
 
         async function addWater() {
@@ -98,14 +110,29 @@
         }
 
         async function upload() {
-            const file = document.getElementById('file').files[0];
             const btn = document.querySelector('.btn-scan');
             btn.innerText = "⏳ АНАЛІЗУЮ...";
             const fd = new FormData();
-            fd.append('file', file);
+            fd.append('file', document.getElementById('file').files[0]);
             await fetch(`${API}/analyze?user_id=${uid}`, { method: 'POST', body: fd });
             btn.innerText = "📸 СКАНУВАТИ СТРАВУ";
             loadStats();
+        }
+
+        function openChat() { document.getElementById('chatBox').style.display = 'flex'; }
+        function closeChat() { document.getElementById('chatBox').style.display = 'none'; }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value;
+            if(!msg) return;
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `<p><b>Ви:</b> ${msg}</p>`;
+            input.value = '';
+            const r = await fetch(`${API}/chat?user_id=${uid}&message=${msg}`, {method: 'POST'});
+            const d = await r.json();
+            container.innerHTML += `<p><b>ШІ:</b> ${d.reply}</p>`;
+            container.scrollTop = container.scrollHeight;
         }
 
         loadStats();
