@@ -2,143 +2,219 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FitLio AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Fitness AI Coach</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --accent-color: #22c55e;
-            --text-main: #f8fafc;
+            --bg-color: #1a1d21;
+            --text-color: #ffffff;
+            --accent-color: #34c759; /* Зелений для прогресу */
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --border-color: rgba(255, 255, 255, 0.1);
         }
+
         body {
-            font-family: 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0; padding: 20px;
-            display: flex; flex-direction: column; align-items: center;
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
         }
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { font-size: 24px; margin: 0; color: var(--accent-color); }
 
         /* Кільце прогресу */
         .progress-container {
             position: relative;
-            width: 200px; height: 200px;
-            margin-bottom: 30px;
+            width: 180px;
+            height: 180px;
+            margin: 20px 0;
         }
-        .circle-bg { fill: none; stroke: #334155; stroke-width: 10; }
-        .circle-progress {
-            fill: none; stroke: var(--accent-color);
-            stroke-width: 10; stroke-linecap: round;
-            stroke-dasharray: 565; stroke-dashoffset: 565;
-            transition: stroke-dashoffset 1s ease-out;
-            transform: rotate(-90deg); transform-origin: 50% 50%;
+
+        .progress-circle {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
         }
+
+        .progress-circle-bg {
+            fill: none;
+            stroke: var(--card-bg);
+            stroke-width: 12;
+        }
+
+        .progress-circle-bar {
+            fill: none;
+            stroke: var(--accent-color);
+            stroke-width: 12;
+            stroke-linecap: round;
+            stroke-dasharray: 471; /* 2 * PI * R (75) */
+            stroke-dashoffset: 471;
+            transition: stroke-dashoffset 0.5s ease-out;
+        }
+
         .progress-text {
-            position: absolute; top: 50%; left: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
         }
-        .progress-text span { font-size: 28px; font-weight: bold; display: block; }
-        .progress-text small { color: #94a3b8; }
 
-        /* Картки */
-        .card {
+        .current-kcal { font-size: 32px; font-weight: bold; }
+        .total-kcal { font-size: 16px; color: rgba(255,255,255,0.6); }
+
+        /* Картка історії */
+        .history-card {
             background: var(--card-bg);
-            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
-            padding: 20px; width: 100%;
-            box-sizing: border-box;
-            border: 1px solid rgba(255,255,255,0.1);
-            margin-bottom: 15px;
+            width: 100%;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+            padding: 16px;
+            margin-bottom: 80px; /* Місце для кнопки */
         }
-        .btn-scan {
-            background: var(--accent-color);
-            color: white; border: none;
-            padding: 15px 30px; border-radius: 15px;
-            font-size: 18px; font-weight: bold;
-            width: 100%; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
+
+        .history-header {
+            font-size: 18px; font-weight: 600;
+            margin-bottom: 12px;
+            display: flex; justify-content: space-between;
         }
-        #res { margin-top: 15px; font-size: 14px; line-height: 1.5; color: #cbd5e1; }
-        input[type="file"] { display: none; }
+
+        .history-list {
+            list-style: none; padding: 0; margin: 0;
+            max-height: 200px; overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex; justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .history-item:last-child { border-bottom: none; }
+
+        /* Кнопка сканування (фіксована знизу) */
+        .scan-btn-container {
+            position: fixed;
+            bottom: 16px;
+            left: 16px; right: 16px;
+            display: flex; justify-content: center;
+        }
+
+        .scan-label {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 30px;
+            font-size: 18px; font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(52, 199, 89, 0.4);
+            display: flex; align-items: center; gap: 8px;
+            transition: transform 0.1s;
+        }
+        .scan-label:active { transform: scale(0.97); }
+        
+        input[type="file"] { display: none; } /* Ховаємо стандартний input */
+
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>FitLio AI 🥗</h1>
-    </div>
-
+    <div style="font-size: 14px; color: rgba(255,255,255,0.6);">Сьогодні</div>
+    
     <div class="progress-container">
-        <svg width="200" height="200">
-            <circle class="circle-bg" cx="100" cy="100" r="90"></circle>
-            <circle id="progressBar" class="circle-progress" cx="100" cy="100" r="90"></circle>
+        <svg class="progress-circle" viewBox="0 0 160 160">
+            <circle class="progress-circle-bg" cx="80" cy="80" r="75"></circle>
+            <circle class="progress-circle-bar" id="progressBar" cx="80" cy="80" r="75"></circle>
         </svg>
         <div class="progress-text">
-            <span id="kcalVal">0</span>
-            <small>ккал сьогодні</small>
+            <div class="current-kcal" id="currKcal">0</div>
+            <div class="total-kcal">/ 2000 ккал</div>
         </div>
     </div>
 
-    <div class="card">
-        <label for="fileInput" class="btn-scan">
-            📸 СКАНУВАТИ СТРАВУ
+    <div class="history-card">
+        <div class="history-header">
+            <span>Історія їжі</span>
+            <span id="foodCount" style="color: rgba(255,255,255,0.6);">0</span>
+        </div>
+        <ul class="history-list" id="res">
+            <li class="history-item" style="color: rgba(255,255,255,0.4); justify-content: center;">Ще немає записів</li>
+        </ul>
+    </div>
+
+    <div class="scan-btn-container">
+        <label for="fileInput" class="scan-label">
+            📷 Сканувати страву
         </label>
         <input type="file" id="fileInput" accept="image/*" onchange="scanFood()">
-        <div id="res">Натисніть кнопку, щоб додати прийом їжі</div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
-        const user_id = tg.initDataUnsafe.user?.id || 12345;
+        tg.expand(); // Розгортаємо Mini App
 
-        // Функція оновлення кільця
-        function updateProgress(current, goal = 2000) {
-            const circle = document.getElementById('progressBar');
-            const kcalText = document.getElementById('kcalVal');
-            const radius = 90;
-            const circumference = 2 * Math.PI * radius;
-            const offset = circumference - (current / goal) * circumference;
-            circle.style.strokeDashoffset = offset < 0 ? 0 : offset;
-            kcalText.innerText = Math.round(current);
+        // --- ЛОГІКА ДИЗАЙНУ (Кільце) ---
+        function setProgress(current, total) {
+            const bar = document.getElementById('progressBar');
+            const currText = document.getElementById('currKcal');
+            currText.innerText = current;
+            
+            // Розрахунок заповнення кільця
+            const maxOffset = 471; // 2 * PI * R (75)
+            const progress = current / total;
+            const newOffset = maxOffset * (1 - progress);
+            
+            // Якщо калорій більше норми, колір стає червоним
+            if (current > total) {
+                bar.style.stroke = "#ff3b30";
+                bar.style.strokeDashoffset = 0; // Повне коло
+            } else {
+                bar.style.stroke = "#34c759"; // Стандартний зелений
+                bar.style.strokeDashoffset = newOffset;
+            }
         }
 
+        // Тестове заповнення для перевірки дизайну
+        // setProgress(540, 2000); // Спробуй розкоментувати і оновити
+
+        // --- ЛОГІКА ШІ (Беремо зі старого коду) ---
         async function scanFood() {
             const fileInput = document.getElementById('fileInput');
-            const out = document.getElementById('res');
-            if (!fileInput.files[0]) return;
-
-            out.innerText = "⏳ ШІ аналізує страву...";
+            const resList = document.getElementById('res');
+            const bar = document.getElementById('progressBar');
+            
+            if (fileInput.files.length === 0) return;
+            
+            // Показуємо завантаження
+            bar.style.stroke = "#ff9500"; // Помаранчевий під час аналізу
+            
             const fd = new FormData();
             fd.append('file', fileInput.files[0]);
 
             try {
-                // ВАЖЛИВО: Заміни на своє посилання Railway
-                const r = await fetch(`https://fitness-app-production-b4a3.up.railway.app/analyze?user_id=${user_id}`, {
+                // ЗАМІНИ НА СВОЮ АДРЕСУ RAILWAY
+                const r = await fetch('https://your-app.railway.app/analyze', {
                     method: 'POST',
                     body: fd
                 });
                 const d = await r.json();
-                out.innerText = d.result;
-                loadStats(); // Оновлюємо кільце після сканування
+                
+                // Оновлюємо список історії (проста анімація появи)
+                resList.innerHTML = `<li class="history-item" style="animation: fadeIn 0.5s;">${d.result}</li>`;
+                bar.style.stroke = "#34c759"; // Повертаємо зелений
+                
+                // P.S. Підключення до бази (`setProgress`) зробимо наступним кроком.
+                
             } catch (err) {
-                out.innerText = "Помилка зв'язку з сервером.";
+                resList.innerHTML = `<li class="history-item" style="color: #ff3b30;">Помилка зв'язку.</li>`;
+                bar.style.stroke = "#ff3b30"; // Червоний помилки
             }
         }
-
-        async function loadStats() {
-            try {
-                const r = await fetch(`https://fitness-app-production-b4a3.up.railway.app/stats?user_id=${user_id}`);
-                const d = await r.json();
-                updateProgress(d.total);
-            } catch (e) { console.log("Stats error"); }
-        }
-
-        loadStats();
     </script>
 </body>
 </html>
