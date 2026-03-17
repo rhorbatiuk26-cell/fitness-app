@@ -69,8 +69,7 @@
     <script>
         const tg = window.Telegram.WebApp;
         const uid = tg.initDataUnsafe.user?.id || "user_123";
-        const API = "[https://your-app.railway.app](https://your-app.railway.app)"; // ЗАМІНИ НА СВІЙ URL
-
+        const API = "https://fitness-app-production-b4a3.up.railway.app";
         async function load() {
             try {
                 const res = await fetch(`${API}/stats?user_id=${uid}`);
