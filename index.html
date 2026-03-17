@@ -3,134 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitLio Pro</title>
+    <title>FitLio AI</title>
     <script src="[https://telegram.org/js/telegram-web-app.js](https://telegram.org/js/telegram-web-app.js)"></script>
     <style>
-        :root { --bg: #f2f4f7; --card: #ffffff; --text: #1c1c1e; --accent: #34c759; --water: #007aff; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px 15px 110px; }
-        .stats-card { background: var(--card); border-radius: 30px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; margin-bottom: 15px; }
-        .progress-box { position: relative; width: 160px; height: 160px; margin: 0 auto 15px; }
-        svg { transform: rotate(-90deg); width: 160px; height: 160px; }
-        circle { fill: none; stroke-width: 14; stroke-linecap: round; transition: 1s; }
+        :root { --bg: #f2f4f7; --card: #ffffff; --text: #1c1c1e; --accent: #34c759; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px 15px 100px; }
+        .card { background: var(--card); border-radius: 25px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; margin-bottom: 15px; }
+        .progress-circle { position: relative; width: 150px; height: 150px; margin: 0 auto 10px; }
+        svg { transform: rotate(-90deg); width: 150px; height: 150px; }
+        circle { fill: none; stroke-width: 12; stroke-linecap: round; transition: 1s; }
         .bg-c { stroke: #eee; }
         .bar-c { stroke: var(--accent); stroke-dasharray: 440; stroke-dashoffset: 440; }
-        .macros { display: flex; justify-content: space-around; margin-top: 15px; font-size: 14px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .btn-card { background: var(--card); border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); cursor: pointer; }
-        #chatModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; display: none; flex-direction: column; }
-        .chat-msgs { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 15px; border-radius: 18px; max-width: 80%; font-size: 14px; line-height: 1.4; }
-        .msg.user { background: #e1ffeb; align-self: flex-end; }
-        .msg.bot { background: #f0f0f0; align-self: flex-start; }
-        .chat-input { padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white; }
-        input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 12px; outline: none; }
-        .send-btn { background: var(--accent); color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; padding: 20px; background: rgba(242,244,247,0.9); backdrop-filter: blur(10px); }
-        .scan-btn { background: #1c1c1e; color: white; padding: 18px; border-radius: 22px; text-align: center; font-weight: bold; cursor: pointer; }
+        .macros { display: flex; justify-content: space-around; margin-top: 10px; font-size: 14px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn-action { background: var(--card); border-radius: 18px; padding: 15px; text-align: center; cursor: pointer; border: none; font-size: 14px; font-weight: 600; }
+        #chat { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; display: none; flex-direction: column; }
+        .chat-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 15px; border-radius: 15px; max-width: 80%; font-size: 14px; }
+        .msg.u { background: #e1ffeb; align-self: flex-end; }
+        .msg.b { background: #f0f0f0; align-self: flex-start; }
+        .chat-f { padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        input { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #ddd; outline: none; }
+        .scan-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 20px; background: rgba(242,244,247,0.9); backdrop-filter: blur(10px); }
+        .scan-btn { background: #1c1c1e; color: white; padding: 15px; border-radius: 20px; text-align: center; font-weight: bold; width: 100%; display: block; }
     </style>
 </head>
 <body>
 
-    <div class="stats-card">
-        <div class="progress-box">
-            <svg><circle class="bg-c" cx="80" cy="80" r="70"></circle>
-                 <circle id="bar" class="bar-c" cx="80" cy="80" r="70"></circle></svg>
+    <div class="card">
+        <div class="progress-circle">
+            <svg><circle class="bg-c" cx="75" cy="75" r="70"></circle>
+                 <circle id="bar" class="bar-c" cx="75" cy="75" r="70"></circle></svg>
             <div style="position: absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
-                <div id="kcal" style="font-size: 32px; font-weight: 800;">0</div>
-                <div style="font-size: 10px; color: #888;">ккал сьогодні</div>
+                <div id="kcal" style="font-size: 28px; font-weight: 800;">0</div>
+                <div style="font-size: 10px; color: #888;">ккал</div>
             </div>
         </div>
         <div class="macros">
-            <div><b id="p" style="color:#ff9500">0г</b><br><small>Білки</small></div>
-            <div><b id="f" style="color:#ffcc00">0г</b><br><small>Жири</small></div>
-            <div><b id="c" style="color:#5856d6">0г</b><br><small>Вугл</small></div>
+            <div><b id="p">0г</b><br><small>Білки</small></div>
+            <div><b id="f">0г</b><br><small>Жири</small></div>
+            <div><b id="c">0г</b><br><small>Вугл</small></div>
         </div>
     </div>
 
     <div class="grid">
-        <div class="btn-card" style="grid-column: span 2; background: #34c759; color: white; font-weight: bold;">📈 Мій прогрес</div>
-        <div class="btn-card" onclick="addWater()">💧<br><b>+250 мл</b><br><small id="w">0л</small></div>
-        <div class="btn-card" onclick="toggleChat(true)">💬<br><b>Чат з ШІ</b></div>
+        <button class="btn-action" onclick="addW()">💧 <b>+250мл</b><br><small id="w">0л</small></button>
+        <button class="btn-action" onclick="toggleChat(true)">💬 <b>Чат з ШІ</b></button>
     </div>
 
-    <div id="chatModal">
-        <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
-            <b>Тренер FitLio</b> <span onclick="toggleChat(false)" style="color:#888; font-size: 20px; cursor: pointer;">✕</span>
-        </div>
-        <div id="chatMsgs" class="chat-msgs"></div>
-        <div class="chat-input">
-            <input type="text" id="chatInput" placeholder="Запитай про раціон...">
-            <div class="send-btn" onclick="sendMsg()">➔</div>
+    <div id="chat">
+        <div class="chat-header"><b>Фітнес Тренер</b> <span onclick="toggleChat(false)">✕</span></div>
+        <div id="msgs" class="chat-body"></div>
+        <div class="chat-f">
+            <input type="text" id="cIn" placeholder="Напишіть...">
+            <button onclick="send()">➔</button>
         </div>
     </div>
 
-    <div class="bottom-nav">
-        <label for="file" class="scan-btn">📸 СКАНУВАТИ СТРАВУ</label>
-        <input type="file" id="file" accept="image/*" style="display:none" onchange="upload()">
+    <div class="scan-bar">
+        <label for="fIn" class="scan-btn">📸 СКАНУВАТИ ОБІД</label>
+        <input type="file" id="fIn" accept="image/*" style="display:none" onchange="upload()">
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        const uid = tg.initDataUnsafe.user?.id || "test_user";
-        
-        // ВАЖЛИВО: ЗАМІНИ НА СВОЄ ПОСИЛАННЯ RAILWAY
-        const API = "[https://fitness-app-production-b4a3.up.railway.app](https://fitness-app-production-b4a3.up.railway.app)"; 
+        const uid = tg.initDataUnsafe.user?.id || "user_123";
+        const API = "[https://your-app.railway.app](https://your-app.railway.app)"; // ЗАМІНИ НА СВІЙ URL
 
         async function load() {
             try {
-                const r = await fetch(`${API}/stats?user_id=${uid}`);
-                const d = await r.json();
-                
+                const res = await fetch(`${API}/stats?user_id=${uid}`);
+                const d = await res.json();
                 document.getElementById('kcal').innerText = d.kcal || 0;
                 document.getElementById('p').innerText = (d.p || 0) + 'г';
                 document.getElementById('f').innerText = (d.f || 0) + 'г';
                 document.getElementById('c').innerText = (d.c || 0) + 'г';
                 document.getElementById('w').innerText = (d.water || 0) + 'л';
-                
-                const offset = 440 - (440 * (d.kcal || 0) / 2100);
-                document.getElementById('bar').style.strokeDashoffset = Math.max(0, offset);
-            } catch(e) { console.error("Error loading stats"); }
+                const off = 440 - (440 * (d.kcal || 0) / 2000);
+                document.getElementById('bar').style.strokeDashoffset = Math.max(0, off);
+            } catch (e) { console.error("Load failed"); }
         }
 
-        async function addWater() {
+        async function addW() {
             await fetch(`${API}/add_water?user_id=${uid}&amount=0.25`, {method:'POST'});
             tg.HapticFeedback.impactOccurred('light');
             load();
         }
 
         async function upload() {
-            const file = document.getElementById('file').files[0];
+            const file = document.getElementById('fIn').files[0];
             if(!file) return;
             const btn = document.querySelector('.scan-btn');
-            btn.innerText = "⏳ АНАЛІЗУЮ...";
+            btn.innerText = "⏳ АНАЛІЗ...";
             const fd = new FormData();
             fd.append('file', file);
-            try {
-                const r = await fetch(`${API}/analyze?user_id=${uid}`, {method:'POST', body:fd});
-                const res = await r.json();
-                if(res.error) alert("Помилка: " + res.error);
-                load();
-            } catch(e) { alert("Помилка зв'язку"); }
-            btn.innerText = "📸 СКАНУВАТИ СТРАВУ";
+            await fetch(`${API}/analyze?user_id=${uid}`, {method:'POST', body:fd});
+            btn.innerText = "📸 СКАНУВАТИ ОБІД";
+            load();
         }
 
-        function toggleChat(s) { document.getElementById('chatModal').style.display = s?'flex':'none'; }
+        function toggleChat(s) { document.getElementById('chat').style.display = s?'flex':'none'; }
 
-        async function sendMsg() {
-            const inp = document.getElementById('chatInput');
-            const box = document.getElementById('chatMsgs');
+        async function send() {
+            const inp = document.getElementById('cIn');
+            const box = document.getElementById('msgs');
             if(!inp.value.trim()) return;
             const msg = inp.value;
-            box.innerHTML += `<div class="msg user">${msg}</div>`;
+            box.innerHTML += `<div class="msg u">${msg}</div>`;
             inp.value = "";
-            box.scrollTop = box.scrollHeight;
-            const tid = "b_"+Date.now();
-            box.innerHTML += `<div class="msg bot" id="${tid}">⏳...</div>`;
-            try {
-                const r = await fetch(`${API}/chat?user_id=${uid}&message=${encodeURIComponent(msg)}`, {method:'POST'});
-                const d = await r.json();
-                document.getElementById(tid).innerText = d.reply;
-            } catch(e) { document.getElementById(tid).innerText = "Помилка чату."; }
+            const res = await fetch(`${API}/chat?user_id=${uid}&message=${encodeURIComponent(msg)}`, {method:'POST'});
+            const d = await res.json();
+            box.innerHTML += `<div class="msg b">${d.reply}</div>`;
             box.scrollTop = box.scrollHeight;
         }
 
