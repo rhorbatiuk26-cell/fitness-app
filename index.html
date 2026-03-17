@@ -2,79 +2,124 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitLio Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>FitLio Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f2f4f7; padding: 20px; text-align: center; }
-        .card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        button { background: #34c759; color: white; border: none; padding: 15px 30px; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; margin: 5px 0; }
-        #log { font-size: 10px; color: red; margin-top: 20px; text-align: left; overflow-wrap: break-word; }
+        :root { --bg: #f2f4f7; --card: #ffffff; --text: #1c1c1e; --accent: #34c759; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .card { background: var(--card); border-radius: 25px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .btn { background: var(--card); border: none; border-radius: 20px; padding: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .scan-btn { position: fixed; bottom: 20px; left: 20px; right: 20px; background: #1c1c1e; color: white; padding: 18px; border-radius: 22px; text-align: center; font-weight: bold; cursor: pointer; z-index: 50; }
+        #chat { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; display: none; flex-direction: column; }
+        .msg { margin: 10px 0; padding: 10px; border-radius: 10px; font-size: 14px; }
+        .msg-u { background: #e1ffeb; align-self: flex-end; text-align: right; }
+        .msg-b { background: #f0f0f0; align-self: flex-start; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2 id="kcal">0</h2>
-        <p>ккал сьогодні</p>
-        <div style="display: flex; justify-content: space-around;">
-            <span>Б: <b id="p">0</b></span>
-            <span>Ж: <b id="f">0</b></span>
-            <span>В: <b id="c">0</b></span>
+        <h1 id="kcal">0</h1>
+        <p style="color: #888; font-size: 12px;">ккал сьогодні</p>
+        <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+            <div><b id="p">0г</b><br><small>Білки</small></div>
+            <div><b id="f">0г</b><br><small>Жири</small></div>
+            <div><b id="c">0г</b><br><small>Вугл</small></div>
         </div>
     </div>
 
-    <button onclick="addW()">💧 ДОДАТИ ВОДУ (+250мл)</button>
-    <button onclick="testServer()" style="background: #007aff;">🔍 ПЕРЕВІРИТИ ЗВ'ЯЗОК</button>
-    
-    <div id="log"></div>
+    <div class="grid">
+        <button class="btn" onclick="addW()">💧 +250мл<br><span id="w" style="font-size: 10px; color: #888;">0л</span></button>
+        <button class="btn" onclick="toggleChat(true)">💬 Чат з ШІ</button>
+    </div>
+
+    <div id="chat">
+        <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+            <b>🤖 ШІ Тренер</b> <span onclick="toggleChat(false)" style="cursor: pointer; color: red; font-weight: bold;">✕</span>
+        </div>
+        <div id="msgs" style="flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column;"></div>
+        <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; background: #fff;">
+            <input type="text" id="cIn" style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #ddd;" placeholder="Запитати пораду...">
+            <button onclick="send()" style="background: var(--accent); color: white; border: none; border-radius: 12px; padding: 0 20px; font-weight: bold;">➔</button>
+        </div>
+    </div>
+
+    <label for="fIn" class="scan-btn">📸 СКАНУВАТИ ОБІД</label>
+    <input type="file" id="fIn" accept="image/*" style="display:none" onchange="upload()">
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
+        const uid = tg.initDataUnsafe.user?.id || "user_test";
         
-        // --- ПЕРЕВІР ЦЕ ПОСИЛАННЯ ДУЖЕ УВАЖНО ---
-        // Відкрий Railway, вкладка "Settings", знайди "Public Networking" і скопіюй URL звідти.
+        // --- ТВОЄ ПОСИЛАННЯ ЗІ СКРІНШОТА ---
         const API = "https://fitness-app-production-b4a3.up.railway.app"; 
-
-        async function testServer() {
-            const log = document.getElementById('log');
-            log.innerHTML = "Спроба з'єднання з: " + API + "...<br>";
-            try {
-                const r = await fetch(API + "/");
-                const d = await r.json();
-                alert("УРА! Сервер відповів: " + JSON.stringify(d));
-                log.innerHTML += "✅ Зв'язок встановлено!";
-            } catch (e) {
-                alert("ПОМИЛКА: Сервер не відповідає. Перевір URL!");
-                log.innerHTML += "❌ Помилка: " + e.message;
-            }
-        }
 
         async function load() {
             try {
-                const r = await fetch(`${API}/stats?user_id=test`);
+                const r = await fetch(`${API}/stats?user_id=${uid}`);
                 const d = await r.json();
                 document.getElementById('kcal').innerText = d.kcal || 0;
-                document.getElementById('p').innerText = d.p || 0;
-                document.getElementById('f').innerText = d.f || 0;
-                document.getElementById('c').innerText = d.c || 0;
-            } catch(e) { console.log("Load error"); }
+                document.getElementById('p').innerText = (d.p || 0) + 'г';
+                document.getElementById('f').innerText = (d.f || 0) + 'г';
+                document.getElementById('c').innerText = (d.c || 0) + 'г';
+                document.getElementById('w').innerText = (d.water || 0) + 'л';
+            } catch(e) { console.error("Помилка завантаження"); }
         }
 
         async function addW() {
             try {
-                const r = await fetch(`${API}/add_water?user_id=test&amount=0.25`, {method:'POST'});
-                if(r.ok) {
-                    alert("Воду додано!");
-                    load();
-                }
+                await fetch(`${API}/add_water?user_id=${uid}&amount=0.25`, {method:'POST'});
+                tg.HapticFeedback.impactOccurred('light');
+                load();
+            } catch(e) { alert("Сервер недоступний"); }
+        }
+
+        async function upload() {
+            const file = document.getElementById('fIn').files[0];
+            if(!file) return;
+            const btn = document.querySelector('.scan-btn');
+            btn.innerText = "⏳ АНАЛІЗУЮ...";
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                await fetch(`${API}/analyze?user_id=${uid}`, {method:'POST', body:fd});
+                load();
+            } catch(e) { alert("Помилка аналізу"); }
+            btn.innerText = "📸 СКАНУВАТИ ОБІД";
+        }
+
+        function toggleChat(s) { 
+            document.getElementById('chat').style.display = s ? 'flex' : 'none'; 
+            if(s) load();
+        }
+
+        async function send() {
+            const inp = document.getElementById('cIn');
+            const box = document.getElementById('msgs');
+            const txt = inp.value.trim();
+            if(!txt) return;
+            
+            box.innerHTML += `<div class="msg msg-u"><b>Ви:</b> ${txt}</div>`;
+            inp.value = "";
+            box.scrollTop = box.scrollHeight;
+
+            const tempId = "bot_" + Date.now();
+            box.innerHTML += `<div class="msg msg-b" id="${tempId}"><b>ШІ:</b> ⏳ Думаю...</div>`;
+
+            try {
+                const r = await fetch(`${API}/chat?user_id=${uid}&message=${encodeURIComponent(txt)}`, {method:'POST'});
+                const d = await r.json();
+                document.getElementById(tempId).innerHTML = `<b>ШІ:</b> ${d.reply}`;
             } catch(e) {
-                alert("Не вдалося додати воду: " + e.message);
+                document.getElementById(tempId).innerHTML = `<b>ШІ:</b> Помилка зв'язку.`;
             }
+            box.scrollTop = box.scrollHeight;
         }
 
         load();
+        tg.expand();
     </script>
 </body>
 </html>
