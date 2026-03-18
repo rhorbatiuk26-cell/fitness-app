@@ -7,10 +7,9 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
-# База даних у Volume для збереження даних
 DB_DIR = "/app/data"
 if not os.path.exists(DB_DIR): os.makedirs(DB_DIR, exist_ok=True)
-DATABASE_URL = f"sqlite:///{DB_DIR}/fitlio_ultimate.db"
+DATABASE_URL = f"sqlite:///{DB_DIR}/fitlio_ultimate_v2.db"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -19,6 +18,7 @@ Base = declarative_base()
 class UserProfile(Base):
     __tablename__ = "profiles"
     user_id = Column(String, primary_key=True)
+    goal = Column(String) # Схуднення, Баланс, Маса
     c_kcal = Column(Integer); c_p = Column(Integer); c_f = Column(Integer)
     c_c = Column(Integer); c_sugar = Column(Integer); c_salt = Column(Integer)
 
@@ -37,7 +37,7 @@ class WaterLog(Base):
 
 Base.metadata.create_all(bind=engine)
 genai.configure(api_key=os.environ.get("GEMINI_KEY"))
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-1.5-flash')
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -64,25 +64,25 @@ async def get_stats(user_id: str, date: str, db: Session = Depends(get_db)):
             "f": round(sum(f.fat for f in food), 1), "c": round(sum(f.carbs for f in food), 1),
             "sugar": round(sum(f.sugar for f in food), 1), "salt": round(sum(f.salt for f in food), 1)
         },
-        "norms": {"kcal": p.c_kcal, "p": p.c_p, "f": p.c_f, "c": p.c_c, "sugar": p.c_sugar, "salt": p.c_salt} if p else None,
+        "norms": {"kcal": p.c_kcal, "p": p.c_p, "f": p.c_f, "c": p.c_c, "sugar": p.c_sugar, "salt": p.c_salt, "goal": p.goal} if p else None,
         "water": round(sum(w.amount for w in water), 2),
         "meals": meals
     }
 
 @app.post("/calculate_norms")
 async def calc_norms(data: dict):
-    prompt = f"Розрахуй КБЖВ, цукор (до 50г) та сіль (до 5г) для: {data}. JSON: {{'kcal':0,'p':0,'f':0,'c':0,'sugar':50,'salt':5}}"
+    prompt = f"Розрахуй КБЖВ для цілі '{data['goal']}'. Людина: вага {data['w']}, зріст {data['h']}, вік {data['a']}. Цукор до 50г, сіль до 5г. Поверни ТІЛЬКИ JSON: {{'kcal':0,'p':0,'f':0,'c':0,'sugar':50,'salt':5}}"
     res = model.generate_content(prompt)
     return json.loads(res.text[res.text.find("{"):res.text.rfind("}")+1])
 
 @app.post("/save_profile")
 async def save_profile(data: dict, db: Session = Depends(get_db)):
-    db.merge(UserProfile(user_id=data['user_id'], c_kcal=data['kcal'], c_p=data['p'], c_f=data['f'], c_c=data['c'], c_sugar=data['sugar'], c_salt=data['salt']))
+    db.merge(UserProfile(user_id=data['user_id'], goal=data['goal'], c_kcal=data['kcal'], c_p=data['p'], c_f=data['f'], c_c=data['c'], c_sugar=data['sugar'], c_salt=data['salt']))
     db.commit(); return {"ok": True}
 
 @app.post("/analyze")
 async def analyze(text_input: str = Form(None), file: UploadFile = File(None)):
-    prompt = "Поверни JSON: {'name': '...', 'kcal': 0, 'p': 0, 'f': 0, 'c': 0, 'sugar': 0, 'salt': 0}"
+    prompt = "Аналізуй їжу. Поверни ТІЛЬКИ JSON: {'name': '...', 'kcal': 0, 'p': 0, 'f': 0, 'c': 0, 'sugar': 0, 'salt': 0}"
     if file: res = model.generate_content([prompt, {"mime_type": "image/jpeg", "data": await file.read()}])
     else: res = model.generate_content(prompt + (text_input or ""))
     return json.loads(res.text[res.text.find("{"):res.text.rfind("}")+1])
@@ -101,5 +101,5 @@ async def add_water(user_id: str, date: str, amount: float, db: Session = Depend
 
 @app.post("/chat")
 async def chat(msg: str = Form(...)):
-    res = model.generate_content(f"Ти дієтолог FitLio. Дай пораду українською: {msg}")
+    res = model.generate_content(f"Ти дієтолог FitLio. Дай коротку відповідь: {msg}")
     return {"reply": res.text}
