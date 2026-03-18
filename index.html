@@ -3,93 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitLio Salt & Sugar Pro</title>
+    <title>FitLio Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --bg: #e0e5ec; --text: #31344b; --accent: #34c759; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         
-        /* Neumorphism Стиль Картки */
-        .card { 
-            background: var(--bg); 
-            border-radius: 25px; 
-            padding: 25px; 
-            text-align: center; 
-            box-shadow: 7px 7px 15px #babecc, -7px -7px 15px #ffffff; 
-            margin-bottom: 20px; 
-        }
+        .card { background: var(--bg); border-radius: 20px; padding: 20px; box-shadow: 7px 7px 15px #babecc, -7px -7px 15px #ffffff; margin-bottom: 15px; text-align: center; }
+        .btn { background: var(--bg); border: none; border-radius: 12px; padding: 12px; font-weight: bold; box-shadow: 3px 3px 6px #babecc, -3px -3px 6px #ffffff; cursor: pointer; transition: 0.2s; }
+        .btn:active { box-shadow: inset 2px 2px 4px #babecc, inset -2px -2px 4px #ffffff; }
         
-        h1 { font-size: 32px; font-weight: 800; margin: 0 0 10px; text-shadow: 1px 1px 1px #fff; }
+        .meal-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 5px; border-bottom: 1px solid #d1d9e6; cursor: pointer; }
+        .meal-row:last-child { border: none; }
         
-        /* Neumorphism Кнопка */
-        .btn { 
-            background: var(--bg); 
-            border: none; 
-            border-radius: 15px; 
-            padding: 20px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            box-shadow: 4px 4px 8px #babecc, -4px -4px 8px #ffffff; 
-            transition: 0.2s; 
-        }
-        .btn:active { box-shadow: inset 2px 2px 5px #babecc, inset -2px -2px 5px #ffffff; }
+        .period-selector { display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; }
+        .period-btn { font-size: 11px; padding: 8px 12px; border-radius: 20px; }
 
-        /* Прогрес Бари */
-        .prog-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 12px; }
-        .prog-bg { background: #f0f0f0; border-radius: 10px; width: 60%; height: 8px; overflow: hidden; box-shadow: inset 1px 1px 2px #babecc; }
-        .prog-bar { background: var(--accent); height: 100%; border-radius: 10px; width: 0%; transition: 0.5s; }
+        #profileModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: none; padding: 30px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--bg); box-shadow: inset 2px 2px 5px #babecc, inset -2px -2px 5px #ffffff; margin-top: 10px; outline: none; }
     </style>
 </head>
 <body>
 
+    <div id="profileModal">
+        <div class="card">
+            <h3>Твій Профіль</h3>
+            <select id="gender"><option value="male">Чоловік</option><option value="female">Жінка</option></select>
+            <input type="number" id="weight" placeholder="Вага (кг)">
+            <input type="number" id="height" placeholder="Зріст (см)">
+            <input type="number" id="age" placeholder="Вік">
+            <select id="goal"><option value="lose">Схуднути</option><option value="maintain">Підтримка</option><option value="gain">Набрати</option></select>
+            <button class="btn" style="width:100%; margin-top:20px; background:var(--accent); color:white;" onclick="saveProfile()">ПОЧАТИ</button>
+        </div>
+    </div>
+
+    <div class="period-selector">
+        <button class="btn period-btn" onclick="load(1)">Сьогодні</button>
+        <button class="btn period-btn" onclick="load(7)">Тиждень</button>
+        <button class="btn period-btn" onclick="load(30)">Місяць</button>
+    </div>
+
     <div class="card">
-        <h1 id="kcal">0</h1>
-        <p style="color: #888; font-size: 10px;">ккал сьогодні</p>
-        
-        <div class="prog-row">
-            <span>Цукор (Норма: 25г)</span>
-            <div class="prog-bg"><div id="sug_bar" class="prog-bar" style="background:#ff9500;"></div></div>
-            <span id="sug">0г</span>
+        <h1 id="kcal_main">0</h1>
+        <p style="font-size:12px; color:#888;">ккал спожито / ціль <span id="kcal_norm">2000</span></p>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; font-size:10px; margin-top:15px;">
+            <div>Б: <b id="p_val">0</b>г</div><div>Ж: <b id="f_val">0</b>г</div><div>В: <b id="c_val">0</b>г</div>
         </div>
-        <div class="prog-row">
-            <span>Сіль (Норма: 5г)</span>
-            <div class="prog-bg"><div id="salt_bar" class="prog-bar" style="background:#007aff;"></div></div>
-            <span id="salt">0г</span>
+        <div style="font-size:10px; color:#888; margin-top:10px; border-top: 1px solid #d1d9e6; padding-top:10px;">
+            Цукор: <span id="sug_val">0</span>/25г | Сіль: <span id="salt_val">0</span>/5г
         </div>
     </div>
 
-    <div class="grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-        <button class="btn" onclick="addW()">💧 +250мл</button>
-        <button class="btn" onclick="toggleChat(true)">💬 Чат з ШІ</button>
+    <div class="card" style="padding: 10px 20px;">
+        <div class="meal-row" onclick="openScan('Breakfast')"><span>🍳 Сніданок</span><b id="m_b">0</b></div>
+        <div class="meal-row" onclick="openScan('Lunch')"><span>🍲 Обід</span><b id="m_l">0</b></div>
+        <div class="meal-row" onclick="openScan('Dinner')"><span>🥗 Вечеря</span><b id="m_d">0</b></div>
+        <div class="meal-row" onclick="openScan('Snack')"><span>🍎 Перекус</span><b id="m_s">0</b></div>
     </div>
 
-    <label for="fIn" class="btn" style="position: fixed; bottom: 20px; left: 20px; right: 20px; text-align: center; background: #1c1c1e; color: white;">📸 СКАНУВАТИ СТРАВУ</label>
-    <input type="file" id="fIn" accept="image/*" style="display:none" onchange="upload()">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+        <button class="btn" onclick="addW()">💧 +0.25л (<span id="w_val">0</span>л)</button>
+        <button class="btn" onclick="tg.showPopup({message:'Чат з ШІ-тренером доступний у Premium'})">💬 Чат</button>
+    </div>
+
+    <input type="file" id="fIn" style="display:none" onchange="doUpload()">
 
     <script>
         const tg = window.Telegram.WebApp;
-        const uid = tg.initDataUnsafe.user?.id || "user_test";
-        const API = "https://fitness-app-production-b4a3.up.railway.app"; 
+        const uid = tg.initDataUnsafe.user?.id || "test_user";
+        const API = "https://fitness-app-production-b4a3.up.railway.app";
+        let activeMeal = "";
 
-        async function load() {
+        async function load(days = 1) {
             try {
-                const r = await fetch(`${API}/stats?user_id=${uid}`);
+                const r = await fetch(`${API}/stats?user_id=${uid}&days=${days}`);
                 const d = await r.json();
-                document.getElementById('kcal').innerText = d.kcal || 0;
-                document.getElementById('sug').innerText = (d.sugar || 0) + 'г';
-                document.getElementById('salt').innerText = (d.salt || 0) + 'г';
                 
-                // Оновлення прогрес-барів
-                const sugOff = Math.min(100, (d.sugar || 0) / 25 * 100);
-                document.getElementById('sug_bar').style.width = sugOff + '%';
-                const saltOff = Math.min(100, (d.salt || 0) / 5 * 100);
-                document.getElementById('salt_bar').style.width = saltOff + '%';
-            } catch(e) { console.error("API Error:", e); }
+                if(!d.has_profile && uid !== "test_user") {
+                    document.getElementById('profileModal').style.display = 'block';
+                }
+
+                document.getElementById('kcal_main').innerText = d.kcal;
+                document.getElementById('kcal_norm').innerText = d.norm;
+                document.getElementById('p_val').innerText = d.p;
+                document.getElementById('f_val').innerText = d.f;
+                document.getElementById('c_val').innerText = d.c;
+                document.getElementById('sug_val').innerText = d.sugar;
+                document.getElementById('salt_val').innerText = d.salt;
+                document.getElementById('w_val').innerText = d.water;
+                
+                document.getElementById('m_b').innerText = d.meals.Breakfast + " ккал";
+                document.getElementById('m_l').innerText = d.meals.Lunch + " ккал";
+                document.getElementById('m_d').innerText = d.meals.Dinner + " ккал";
+                document.getElementById('m_s').innerText = d.meals.Snack + " ккал";
+            } catch(e) { console.error(e); }
         }
 
-        // (Функції addW, toggleChat, send, upload - як у v48.0)
-        
-        load();
+        async function saveProfile() {
+            const data = {
+                user_id: uid, gender: document.getElementById('gender').value,
+                weight: document.getElementById('weight').value,
+                height: document.getElementById('height').value,
+                age: document.getElementById('age').value, goal: document.getElementById('goal').value
+            };
+            await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            document.getElementById('profileModal').style.display = 'none';
+            load();
+        }
+
+        function openScan(type) { activeMeal = type; document.getElementById('fIn').click(); }
+
+        async function doUpload() {
+            const file = document.getElementById('fIn').files[0];
+            if(!file) return;
+            tg.MainButton.setText("Аналізую...").show();
+            const fd = new FormData(); fd.append('file', file);
+            await fetch(`${API}/analyze?user_id=${uid}&meal_type=${activeMeal}`, {method:'POST', body:fd});
+            tg.MainButton.hide();
+            load();
+        }
+
+        async function addW() {
+            await fetch(`${API}/add_water?user_id=${uid}&amount=0.25`, {method:'POST'});
+            load();
+        }
+
+        load(); tg.expand();
     </script>
 </body>
 </html>
