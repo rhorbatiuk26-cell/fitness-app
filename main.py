@@ -7,6 +7,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
+# БД Налаштування
 DATABASE_URL = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://", 1)
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -35,8 +36,10 @@ class WaterLog(Base):
     user_id = Column(String); amount = Column(Float); created_at = Column(DateTime)
 
 Base.metadata.create_all(bind=engine)
+
+# AI Налаштування
 genai.configure(api_key=os.environ.get("GEMINI_KEY"))
-model = genai.GenerativeModel('gemini-2.0-flash') # Стабільна версія для аналізу
+model = genai.GenerativeModel('gemini-2.5-flash') # Стабільна версія
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -50,13 +53,8 @@ def calc_norms(p):
     val = (10 * p.weight) + (6.25 * p.height) - (5 * p.age)
     bmr = val + 5 if p.gender == 'male' else val - 161
     tdee = bmr * 1.3
-    if p.goal == 'lose': kcal = int(tdee - 500)
-    elif p.goal == 'gain': kcal = int(tdee + 300)
-    elif p.goal == 'muscle': kcal = int(tdee + 600)
-    else: kcal = int(tdee)
-    p_n = p.weight * (2.2 if p.goal == 'muscle' else 1.7)
-    f_n = p.weight * 0.9
-    return {"kcal": kcal, "p": int(p_n), "f": int(f_n), "c": int((kcal-(p_n*4+f_n*9))/4), "sugar": 50, "salt": 5}
+    kcal = int(tdee - 500) if p.goal == 'lose' else int(tdee + 300) if p.goal == 'gain' else int(tdee)
+    return {"kcal": kcal, "p": int(p.weight*1.8), "f": int(p.weight*0.9), "c": int((kcal-(p.weight*1.8*4+p.weight*0.9*9))/4), "sugar": 50, "salt": 5}
 
 @app.post("/analyze")
 async def analyze(text_input: str = Form(None), file: UploadFile = File(None)):
@@ -70,7 +68,7 @@ async def analyze(text_input: str = Form(None), file: UploadFile = File(None)):
 @app.post("/save_food")
 async def save_food(data: dict, db: Session = Depends(get_db)):
     dt = datetime.strptime(data['date'], '%Y-%m-%d')
-    db.add(FoodLog(user_id=str(data['user_id']), meal_type=data['meal_type'], food_name=data['name'], calories=int(data['kcal']), protein=float(data['p']), fat=float(data['f']), carbs=float(data['c']), sugar=float(data['sugar']), salt=float(data['salt']), created_at=dt))
+    db.add(FoodLog(user_id=str(data['user_id']), meal_type=data['meal_type'], food_name=data['name'], calories=int(data['kcal']), protein=float(data['p']), fat=float(data['f']), carbs=float(data['c']), sugar=float(data.get('sugar',0)), salt=float(data.get('salt',0)), created_at=dt))
     db.commit(); return {"ok": True}
 
 @app.get("/stats")
@@ -79,19 +77,14 @@ async def get_stats(user_id: str, date: str, db: Session = Depends(get_db)):
     p = db.query(UserProfile).filter(UserProfile.user_id == str(user_id)).first()
     norms = calc_norms(p) if p else {"kcal":2000, "p":120, "f":70, "c":250, "sugar":50, "salt":5}
     food = db.query(FoodLog).filter(FoodLog.user_id == str(user_id), func.date(FoodLog.created_at) == dt).all()
-    workouts = db.query(WorkoutLog).filter(WorkoutLog.user_id == str(user_id), func.date(WorkoutLog.created_at) == dt).all()
     water = db.query(WaterLog).filter(WaterLog.user_id == str(user_id), func.date(WaterLog.created_at) == dt).all()
-    
+    workouts = db.query(WorkoutLog).filter(WorkoutLog.user_id == str(user_id), func.date(WorkoutLog.created_at) == dt).all()
+
     meals_data = {}
     for mt in ["Breakfast", "Lunch", "Dinner", "Snack"]:
         m_items = [f for f in food if f.meal_type == mt]
-        meals_data[mt] = {
-            "kcal": sum(i.calories for i in m_items),
-            "p": sum(i.protein for i in m_items), "f": sum(i.fat for i in m_items), "c": sum(i.carbs for i in m_items),
-            "sugar": sum(i.sugar for i in m_items), "salt": sum(i.salt for i in m_items),
-            "items": [{"id": i.id, "name": i.food_name, "kcal": i.calories} for i in m_items]
-        }
-        
+        meals_data[mt] = {"kcal": sum(i.calories for i in m_items), "items": [{"id": i.id, "name": i.food_name, "kcal": i.calories} for i in m_items]}
+
     return {
         "kcal": sum(f.calories for f in food), "burned": sum(w.burned for w in workouts),
         "p": sum(f.protein for f in food), "f": sum(f.fat for f in food), "c": sum(f.carbs for f in food),
@@ -99,4 +92,16 @@ async def get_stats(user_id: str, date: str, db: Session = Depends(get_db)):
         "water": sum(w.amount for w in water), "norms": norms, "meals": meals_data, "has_profile": p is not None, "weight": p.weight if p else 0
     }
 
-# Решту методів (add_workout, save_profile, delete, add_water) додати з попереднього коду.
+@app.post("/add_water")
+async def add_water(user_id: str, date: str, amount: float, db: Session = Depends(get_db)):
+    db.add(WaterLog(user_id=str(user_id), amount=amount, created_at=datetime.strptime(date, '%Y-%m-%d')))
+    db.commit(); return {"ok": True}
+
+@app.post("/save_profile")
+async def save_profile(data: dict, db: Session = Depends(get_db)):
+    db.merge(UserProfile(user_id=str(data['user_id']), gender=data['gender'], weight=float(data['weight']), height=float(data['height']), age=int(data['age']), goal=data['goal']))
+    db.commit(); return {"ok": True}
+
+@app.delete("/delete/food/{id}")
+async def delete_food(id: int, db: Session = Depends(get_db)):
+    db.query(FoodLog).filter(FoodLog.id == id).delete(); db.commit(); return {"ok": True}
