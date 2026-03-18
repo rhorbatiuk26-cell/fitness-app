@@ -3,35 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitLio Elite</title>
+    <title>FitLio Pro Elite</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --bg: #e0e5ec; --text: #31344b; --accent: #34c759; --shadow: #a3b1c6; --light: #ffffff; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         
-        /* Neumorphism Спеціальні Тіні */
         .neu-card { background: var(--bg); border-radius: 25px; padding: 20px; box-shadow: 8px 8px 16px var(--shadow), -8px -8px 16px var(--light); margin-bottom: 20px; }
         .neu-btn { background: var(--bg); border: none; border-radius: 15px; padding: 15px; font-weight: bold; box-shadow: 5px 5px 10px var(--shadow), -5px -5px 10px var(--light); cursor: pointer; transition: 0.2s; color: var(--text); }
         .neu-btn:active { box-shadow: inset 2px 2px 5px var(--shadow), inset -2px -2px 5px var(--light); }
 
-        /* Календар */
         .calendar { display: flex; overflow-x: auto; gap: 12px; padding: 10px 5px; margin-bottom: 15px; -webkit-overflow-scrolling: touch; }
         .date-item { flex: 0 0 55px; height: 65px; background: var(--bg); border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 4px 4px 8px var(--shadow), -4px -4px 8px var(--light); cursor: pointer; }
         .date-item.active { background: var(--accent); color: white; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1); }
-        .date-item span { font-size: 10px; opacity: 0.8; }
         .date-item b { font-size: 18px; }
 
-        /* Круглий Прогрес */
         .circle-container { position: relative; width: 160px; height: 160px; margin: 0 auto 20px; border-radius: 50%; background: var(--bg); box-shadow: inset 8px 8px 16px var(--shadow), inset -8px -8px 16px var(--light); display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .circle-container h1 { font-size: 38px; margin: 0; font-weight: 900; }
-        .circle-container p { font-size: 10px; color: #888; margin: 0; }
 
-        /* Список Їжі */
         .meal-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 5px; border-bottom: 1px solid rgba(0,0,0,0.05); cursor: pointer; }
-        .meal-row:last-child { border: none; }
-        .meal-name { font-weight: bold; font-size: 15px; }
-        .meal-kcal { color: var(--accent); font-weight: bold; }
-
         #profileModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: none; padding: 30px; box-sizing: border-box; }
         input, select { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--bg); box-shadow: inset 2px 2px 5px var(--shadow), inset -2px -2px 5px var(--light); margin-top: 10px; outline: none; }
     </style>
@@ -40,13 +30,12 @@
 
     <div id="profileModal">
         <div class="neu-card">
-            <h3>Вітаємо у FitLio!</h3>
-            <p style="font-size:12px; color:#888;">Вкажи параметри для розрахунку</p>
+            <h3>Профіль</h3>
             <select id="gender"><option value="male">Чоловік</option><option value="female">Жінка</option></select>
             <input type="number" id="weight" placeholder="Вага (кг)">
             <input type="number" id="height" placeholder="Зріст (см)">
             <input type="number" id="age" placeholder="Вік">
-            <select id="goal"><option value="lose">Схуднути</option><option value="maintain">Підтримка</option><option value="gain">Набір маси</option></select>
+            <select id="goal"><option value="lose">Схуднути</option><option value="maintain">Підтримка</option><option value="gain">Набір</option></select>
             <button class="neu-btn" style="width:100%; margin-top:20px; background:var(--accent); color:white;" onclick="saveProfile()">ЗБЕРЕГТИ</button>
         </div>
     </div>
@@ -54,21 +43,20 @@
     <div class="calendar" id="calendar"></div>
 
     <div class="neu-card" style="text-align: center;">
-        <div class="circle-container">
-            <h1 id="left_kcal">0</h1>
-            <p>ккал залишилось</p>
-            <p style="font-size:8px; opacity:0.6; margin-top:5px;">Ціль: <span id="norm_val">0</span></p>
-        </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; font-size:11px;">
+        <div class="circle-container"><h1 id="kcal_left">0</h1><p style="font-size:10px; color:#888;">залишилось</p></div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; font-size:11px; margin-bottom: 15px;">
             <div>Б: <b id="p_val">0</b>г</div><div>Ж: <b id="f_val">0</b>г</div><div>В: <b id="c_val">0</b>г</div>
+        </div>
+        <div style="border-top: 1px solid rgba(0,0,0,0.05); padding-top: 15px; display: flex; justify-content: space-around; font-size: 10px; color: #666;">
+            <div>🍭 Цукор: <b id="sug_val">0</b>/25г</div><div>🧂 Сіль: <b id="salt_val">0</b>/5г</div>
         </div>
     </div>
 
     <div class="neu-card" style="padding: 10px 20px;">
-        <div class="meal-row" onclick="openScan('Breakfast')"><span class="meal-name">🍳 Сніданок</span><span id="m_b" class="meal-kcal">0 ккал</span></div>
-        <div class="meal-row" onclick="openScan('Lunch')"><span class="meal-name">🍲 Обід</span><span id="m_l" class="meal-kcal">0 ккал</span></div>
-        <div class="meal-row" onclick="openScan('Dinner')"><span class="meal-name">🥗 Вечеря</span><span id="m_d" class="meal-kcal">0 ккал</span></div>
-        <div class="meal-row" onclick="openScan('Snack')"><span class="meal-name">🍎 Перекус</span><span id="m_s" class="meal-kcal">0 ккал</span></div>
+        <div class="meal-row" onclick="openScan('Breakfast')"><b>🍳 Сніданок</b><span id="m_b">0 ккал</span></div>
+        <div class="meal-row" onclick="openScan('Lunch')"><b>🍲 Обід</b><span id="m_l">0 ккал</span></div>
+        <div class="meal-row" onclick="openScan('Dinner')"><b>🥗 Вечеря</b><span id="m_d">0 ккал</span></div>
+        <div class="meal-row" onclick="openScan('Snack')"><b>🍎 Перекус</b><span id="m_s">0 ккал</span></div>
     </div>
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
@@ -105,15 +93,13 @@
                 const r = await fetch(`${API}/stats?user_id=${uid}&date=${selectedDate}`);
                 const d = await r.json();
                 if(!d.has_profile && uid !== "test_user") document.getElementById('profileModal').style.display = 'block';
-                
-                const left = Math.max(0, d.norm - d.kcal);
-                document.getElementById('left_kcal').innerText = left;
-                document.getElementById('norm_val').innerText = d.norm;
+                document.getElementById('kcal_left').innerText = Math.max(0, d.norm - d.kcal);
                 document.getElementById('p_val').innerText = d.p;
                 document.getElementById('f_val').innerText = d.f;
                 document.getElementById('c_val').innerText = d.c;
+                document.getElementById('sug_val').innerText = d.sugar || 0;
+                document.getElementById('salt_val').innerText = d.salt || 0;
                 document.getElementById('w_val').innerText = d.water;
-                
                 document.getElementById('m_b').innerText = d.meals.Breakfast + " ккал";
                 document.getElementById('m_l').innerText = d.meals.Lunch + " ккал";
                 document.getElementById('m_d').innerText = d.meals.Dinner + " ккал";
@@ -122,32 +108,20 @@
         }
 
         async function saveProfile() {
-            const data = {
-                user_id: uid, gender: document.getElementById('gender').value,
-                weight: document.getElementById('weight').value, height: document.getElementById('height').value,
-                age: document.getElementById('age').value, goal: document.getElementById('goal').value
-            };
+            const data = { user_id: uid, gender: document.getElementById('gender').value, weight: document.getElementById('weight').value, height: document.getElementById('height').value, age: document.getElementById('age').value, goal: document.getElementById('goal').value };
             await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             document.getElementById('profileModal').style.display = 'none';
             load();
         }
 
         function openScan(type) { activeMeal = type; document.getElementById('fIn').click(); }
-
         async function doUpload() {
-            const file = document.getElementById('fIn').files[0];
-            if(!file) return;
+            const fd = new FormData(); fd.append('file', document.getElementById('fIn').files[0]);
             tg.MainButton.setText("Аналізую...").show();
-            const fd = new FormData(); fd.append('file', file);
             await fetch(`${API}/analyze?user_id=${uid}&meal_type=${activeMeal}&date=${selectedDate}`, {method:'POST', body:fd});
-            tg.MainButton.hide();
-            load();
+            tg.MainButton.hide(); load();
         }
-
-        async function addW() {
-            await fetch(`${API}/add_water?user_id=${uid}&date=${selectedDate}&amount=0.25`, {method:'POST'});
-            load();
-        }
+        async function addW() { await fetch(`${API}/add_water?user_id=${uid}&date=${selectedDate}&amount=0.25`, {method:'POST'}); load(); }
 
         initCalendar(); load(); tg.expand();
     </script>
