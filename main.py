@@ -16,8 +16,9 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+# Таблиці
 class FoodLog(Base):
-    __tablename__ = "prod_v45_food"
+    __tablename__ = "food_logs_v46"
     id = Column(Integer, primary_key=True)
     user_id = Column(String)
     food_name = Column(String)
@@ -28,7 +29,7 @@ class FoodLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class WaterLog(Base):
-    __tablename__ = "prod_v45_water"
+    __tablename__ = "water_logs_v46"
     id = Column(Integer, primary_key=True)
     user_id = Column(String)
     amount = Column(Float)
@@ -37,10 +38,9 @@ class WaterLog(Base):
 Base.metadata.create_all(bind=engine)
 
 # --- AI CONFIG FIX ---
-# Жорстко прописуємо використання стабільної моделі
 genai.configure(api_key=os.environ.get("GEMINI_KEY"))
-# Вказуємо повний шлях до моделі, щоб уникнути 404
-model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
+# Використовуємо коротку назву моделі для автоматичного вибору стабільного API
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -50,9 +50,12 @@ def get_db():
     try: yield db
     finally: db.close()
 
+@app.get("/")
+async def health():
+    return {"status": "v46.0 System Online"}
+
 @app.post("/add_water")
 async def add_water(user_id: str, amount: float, db: Session = Depends(get_db)):
-    # Виправляємо 404 Not Found для води (додаємо маршрут)
     db.add(WaterLog(user_id=str(user_id), amount=amount))
     db.commit()
     return {"status": "ok"}
@@ -61,11 +64,25 @@ async def add_water(user_id: str, amount: float, db: Session = Depends(get_db)):
 async def analyze(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
         img_data = await file.read()
-        prompt = "Ти дієтолог. Проаналізуй фото. Поверни ТІЛЬКИ JSON: {\"name\": \"...\", \"kcal\": 0, \"p\": 0, \"f\": 0, \"c\": 0}"
-        response = model.generate_content([prompt, {"mime_type": "image/jpeg", "data": img_data}])
+        prompt = "Проаналізуй фото страви. Поверни ТІЛЬКИ чистий JSON: {\"name\": \"назва\", \"kcal\": 200, \"p\": 10, \"f\": 5, \"c\": 20}"
+        
+        # Передача зображення в новому форматі
+        response = model.generate_content([
+            prompt,
+            {"mime_type": "image/jpeg", "data": img_data}
+        ])
+        
         txt = response.text
         data = json.loads(txt[txt.find("{"):txt.rfind("}")+1])
-        new_food = FoodLog(user_id=str(user_id), food_name=data['name'], calories=data['kcal'], protein=data['p'], fat=data['f'], carbs=data['c'])
+        
+        new_food = FoodLog(
+            user_id=str(user_id), 
+            food_name=data.get('name', 'Страва'), 
+            calories=data.get('kcal', 0), 
+            protein=data.get('p', 0), 
+            fat=data.get('f', 0), 
+            carbs=data.get('c', 0)
+        )
         db.add(new_food)
         db.commit()
         return data
@@ -74,14 +91,18 @@ async def analyze(user_id: str, file: UploadFile = File(...), db: Session = Depe
         return {"error": str(e)}
 
 @app.post("/chat")
-async def chat(user_id: str, message: str):
+async def chat(user_id: str, message: str, db: Session = Depends(get_db)):
     try:
-        # Використовуємо стабільну генерацію
-        response = model.generate_content(f"Ти тренер FitLio. Відповідай коротко: {message}")
+        today = datetime.utcnow().date()
+        food = db.query(FoodLog).filter(FoodLog.user_id == str(user_id), FoodLog.created_at >= today).all()
+        kcal = sum(f.calories for f in food) or 0
+        
+        prompt = f"Ти тренер FitLio. Юзер з'їв {kcal} ккал сьогодні. Питання: {message}. Відповідай коротко українською."
+        response = model.generate_content(prompt)
         return {"reply": response.text}
     except Exception as e:
         logger.error(f"Chat Error: {e}")
-        return {"reply": f"ШІ тимчасово недоступний: {str(e)}"}
+        return {"reply": f"ШІ: {str(e)}"}
 
 @app.get("/stats")
 async def get_stats(user_id: str, db: Session = Depends(get_db)):
