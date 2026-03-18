@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitLio Elite 2.5</title>
+    <title>FitLio Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --accent: #10b981; --blue: #3b82f6; --pink: #ec4899; }
@@ -14,17 +14,16 @@
         .ring-box svg { transform: rotate(-90deg); width: 80px; height: 80px; }
         circle { fill: none; stroke-width: 7; stroke-linecap: round; }
         .ring-fg { stroke-dasharray: 220; stroke-dashoffset: 220; transition: 0.6s ease; }
-        .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; }
+        .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; }
         
+        .water-card { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 20px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border: 1px solid #bae6fd; }
         .meal-card { background: #fff; border-radius: 20px; padding: 15px; margin-bottom: 10px; border: 1px solid #f1f5f9; }
         .meal-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .meal-det { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee; }
         
-        .water-card { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 20px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        
+        .btn { border: none; border-radius: 15px; padding: 12px; font-weight: bold; cursor: pointer; width: 100%; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
         .modal-content { width: 90%; background: #fff; padding: 25px; border-radius: 30px; max-height: 85vh; overflow-y: auto; }
-        .btn { border: none; border-radius: 15px; padding: 12px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
         input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #eee; margin-top: 5px; box-sizing: border-box; }
     </style>
 </head>
@@ -32,16 +31,16 @@
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
         <h2 style="margin:0;">Мій Прогрес</h2>
-        <button class="btn" style="width:50px; margin:0; background:none; font-size:24px;" onclick="openModal('profileModal')">⚙️</button>
+        <button class="btn" style="width:50px; background:none; font-size:24px;" onclick="openModal('profileModal')">⚙️</button>
     </div>
 
     <div class="neu-card">
-        <div style="text-align:center; position:relative;">
+        <div style="text-align:center; position:relative; margin-bottom:15px;">
             <svg width="140" height="140" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
                 <circle stroke="#f1f5f9" stroke-width="12" cx="80" cy="80" r="70"></circle>
                 <circle id="m_ring" stroke="var(--accent)" stroke-width="12" stroke-dasharray="440" stroke-dashoffset="440" cx="80" cy="80" r="70"></circle>
             </svg>
-            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
                 <h1 id="k_left" style="margin:0;">0</h1><small>залишилось</small>
             </div>
         </div>
@@ -49,12 +48,15 @@
             <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_p" class="ring-fg" stroke="var(--accent)" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_p">0</b><small>Б</small></div></div>
             <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_f" class="ring-fg" stroke="#f59e0b" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_f">0</b><small>Ж</small></div></div>
             <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_c" class="ring-fg" stroke="var(--blue)" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_c">0</b><small>В</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_sugar" class="ring-fg" stroke="var(--pink)" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_sugar">0</b><small>Цук</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_salt" class="ring-fg" stroke="#6366f1" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_salt">0</b><small>Сіль</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_water" class="ring-fg" stroke="#0ea5e9" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_water">0</b><small>Вода</small></div></div>
         </div>
     </div>
 
     <div class="water-card">
         <div><b>💧 Гідратація</b><br><small id="w_info">Випито: 0 / 2.5 л</small></div>
-        <button class="btn" style="width:auto; background:var(--blue); color:#fff; padding:8px 15px;" onclick="addWater()">+0.25л</button>
+        <button class="btn" style="width:auto; background:var(--blue); color:#fff; padding:10px 18px;" onclick="addWater()">+0.25л</button>
     </div>
 
     <div id="meals_list">
@@ -74,33 +76,35 @@
 
     <div id="inputModal" class="modal"><div class="modal-content">
         <h3>Додати їжу</h3>
-        <button class="btn" style="background:var(--accent); color:#fff;" onclick="document.getElementById('fIn').click()">📸 Фото</button>
-        <textarea id="tFood" style="width:100%; margin-top:10px; height:80px; padding:10px; border-radius:10px;" placeholder="Що ви з'їли?"></textarea>
-        <button class="btn" style="background:var(--blue); color:#fff;" onclick="doAnalyze()">Аналіз ШІ</button>
-        <button class="btn" style="background:#eee;" onclick="closeModal('inputModal')">Назад</button>
+        <button class="btn" style="background:var(--accent); color:#fff; margin-bottom:12px;" onclick="document.getElementById('fIn').click()">📸 Фото їжі</button>
+        <textarea id="tFood" style="width:100%; height:80px; padding:10px; border-radius:10px;" placeholder="Або введіть текст..."></textarea>
+        <button class="btn" style="background:var(--blue); color:#fff; margin-top:10px;" onclick="doAnalyze()">Аналізувати ШІ</button>
+        <button class="btn" style="margin-top:10px;" onclick="closeModal('inputModal')">Назад</button>
     </div></div>
 
     <div id="confirmModal" class="modal"><div class="modal-content">
         <h3>Перевірка ШІ</h3>
-        <input id="en"> <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-        <input id="ek" type="number"> <input id="ep" type="number">
-        <input id="ef" type="number"> <input id="ec" type="number">
-        <input id="esu" type="number" placeholder="Цукор"> <input id="esa" type="number" placeholder="Сіль">
-        </div><button class="btn" style="background:var(--accent); color:#fff; margin-top:15px;" onclick="finalSave()">Зберегти</button>
+        <input id="en">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <input id="ek" type="number" placeholder="Ккал"> <input id="ep" type="number" placeholder="Б">
+            <input id="ef" type="number" placeholder="Ж"> <input id="ec" type="number" placeholder="В">
+            <input id="esu" type="number" placeholder="Цукор"> <input id="esa" type="number" placeholder="Сіль">
+        </div>
+        <button class="btn" style="background:var(--accent); color:#fff; margin-top:15px;" onclick="finalSave()">Зберегти в щоденник</button>
     </div></div>
 
     <div id="profileModal" class="modal"><div class="modal-content">
-        <h3>Налаштування</h3>
+        <h3>Мій Профіль</h3>
         <input id="weight" type="number" placeholder="Вага (кг)">
         <input id="height" type="number" placeholder="Зріст (см)">
         <select id="goal"><option value="lose">Схуднення</option><option value="maintain">Підтримка</option><option value="gain">Набір</option></select>
-        <hr style="margin:15px 0; opacity:0.2;">
-        <small style="color:var(--blue);">Власні норми (опціонально):</small>
+        <hr style="margin:20px 0; opacity:0.1;">
+        <small style="color:var(--blue); font-weight:bold;">Ручне налаштування норм:</small>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <input id="c_kcal" type="number" placeholder="Ккал"> <input id="c_p" type="number" placeholder="Б">
-            <input id="c_f" type="number" placeholder="Ж"> <input id="c_c" type="number" placeholder="В">
+            <input id="c_kcal" type="number" placeholder="Ккал"> <input id="c_p" type="number" placeholder="Б (г)">
+            <input id="c_f" type="number" placeholder="Ж (г)"> <input id="c_c" type="number" placeholder="В (г)">
         </div>
-        <button class="btn" style="background:var(--blue); color:#fff; margin-top:20px;" onclick="saveProfile()">Зберегти</button>
+        <button class="btn" style="background:var(--blue); color:#fff; margin-top:20px;" onclick="saveProfile()">Зберегти дані</button>
     </div></div>
 
     <input type="file" id="fIn" style="display:none" onchange="doAnalyze()">
@@ -121,23 +125,25 @@
 
             const upR = (id, vId, v, n) => {
                 document.getElementById(id).style.strokeDashoffset = 220 - (220 * Math.min(1, v/n));
-                document.getElementById(vId).innerText = Math.round(v);
+                document.getElementById(vId).innerText = Math.round(v || 0);
             };
             upR('r_p','v_p', d.p, d.norms.p); upR('r_f','v_f', d.f, d.norms.f); upR('r_c','v_c', d.c, d.norms.c);
+            upR('r_sugar','v_sugar', d.sugar, 50); upR('r_salt','v_salt', d.salt, 5); upR('r_water','v_water', d.water, 2.5);
+            
             document.getElementById('w_info').innerText = `Випито: ${d.water} / 2.5 л`;
 
             for (let mt in d.meals) {
                 const m = d.meals[mt];
                 document.getElementById('k_'+mt).innerText = m.kcal;
                 const det = document.getElementById('det_'+mt);
-                det.innerHTML = `<div style="font-size:11px; color:var(--blue); margin-bottom:5px;">Б: ${m.p}г | Ж: ${m.f}г | В: ${m.c}г</div>` + 
-                    m.list.map(i => `<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px;"><span>${i.name}</span><b>${i.kcal}</b></div>`).join('');
+                det.innerHTML = `<div style="font-size:11px; color:#64748b; margin-bottom:5px;">Б:${m.p || 0} Ж:${m.f || 0} В:${m.c || 0} | Цук:${m.sugar || 0} Сіль:${m.salt || 0}</div>` + 
+                    m.list.map(i => `<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:3px;"><span>${i.name}</span><b>${i.kcal}</b></div>`).join('');
             }
         }
 
         function openAdd(mt) { activeMeal=mt; document.getElementById('tFood').value=""; document.getElementById('fIn').value=""; openModal('inputModal'); }
         async function doAnalyze() {
-            tg.MainButton.setText("ШІ Аналізує...").show();
+            tg.MainButton.setText("ШІ аналізує...").show();
             const fd = new FormData();
             if(document.getElementById('fIn').files[0]) fd.append('file', document.getElementById('fIn').files[0]);
             if(document.getElementById('tFood').value) fd.append('text_input', document.getElementById('tFood').value);
