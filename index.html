@@ -3,66 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitLio Pro Elite</title>
+    <title>FitLio Elite V62</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --bg: #e0e5ec; --text: #31344b; --accent: #34c759; --shadow: #a3b1c6; --light: #ffffff; }
+        :root { --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --accent: #10b981; --blue: #3b82f6; --shadow: #e2e8f0; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .neu-card { background: var(--card); border-radius: 24px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .neu-btn { background: var(--card); border: none; border-radius: 14px; padding: 15px; font-weight: bold; box-shadow: 0 4px 12px var(--shadow); cursor: pointer; }
         
-        .neu-card { background: var(--bg); border-radius: 25px; padding: 20px; box-shadow: 8px 8px 16px var(--shadow), -8px -8px 16px var(--light); margin-bottom: 20px; }
-        .neu-btn { background: var(--bg); border: none; border-radius: 15px; padding: 15px; font-weight: bold; box-shadow: 5px 5px 10px var(--shadow), -5px -5px 10px var(--light); cursor: pointer; transition: 0.2s; color: var(--text); }
-        .neu-btn:active { box-shadow: inset 2px 2px 5px var(--shadow), inset -2px -2px 5px var(--light); }
+        /* Стілі кола */
+        .circle-box { position: relative; width: 200px; height: 200px; margin: 0 auto 25px; }
+        svg { transform: rotate(-90deg); width: 200px; height: 200px; }
+        circle { fill: none; stroke-width: 14; stroke-linecap: round; }
+        .bg-circle { stroke: #f1f5f9; }
+        .fg-circle { stroke: var(--accent); stroke-dasharray: 502; stroke-dashoffset: 502; transition: stroke-dashoffset 0.6s ease; }
+        .circle-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%; }
 
-        .calendar { display: flex; overflow-x: auto; gap: 12px; padding: 10px 5px; margin-bottom: 15px; -webkit-overflow-scrolling: touch; }
-        .date-item { flex: 0 0 55px; height: 65px; background: var(--bg); border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 4px 4px 8px var(--shadow), -4px -4px 8px var(--light); cursor: pointer; }
-        .date-item.active { background: var(--accent); color: white; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1); }
-        .date-item b { font-size: 18px; }
+        /* БЖВ Бари */
+        .macro-container { margin-bottom: 10px; }
+        .macro-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+        .macro-bar { height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+        .macro-progress { height: 100%; width: 0%; transition: width 0.6s; }
 
-        .circle-container { position: relative; width: 160px; height: 160px; margin: 0 auto 20px; border-radius: 50%; background: var(--bg); box-shadow: inset 8px 8px 16px var(--shadow), inset -8px -8px 16px var(--light); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .circle-container h1 { font-size: 38px; margin: 0; font-weight: 900; }
+        .calendar { display: flex; overflow-x: auto; gap: 10px; padding: 10px 0; scrollbar-width: none; }
+        .date-item { flex: 0 0 58px; height: 68px; background: var(--card); border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .date-item.active { background: var(--blue); color: white; }
 
-        .meal-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 5px; border-bottom: 1px solid rgba(0,0,0,0.05); cursor: pointer; }
-        #profileModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: none; padding: 30px; box-sizing: border-box; }
-        input, select { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--bg); box-shadow: inset 2px 2px 5px var(--shadow), inset -2px -2px 5px var(--light); margin-top: 10px; outline: none; }
+        .food-list-item { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 14px; border-radius: 16px; margin-bottom: 10px; border: 1px solid #f1f5f9; }
+        #inputModal, #profileModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-content { width: 92%; background: #fff; padding: 25px; border-radius: 28px; box-sizing: border-box; }
+        input, select, textarea { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 10px; font-size: 16px; box-sizing: border-box; background: #f8fafc; }
     </style>
 </head>
 <body>
 
-    <div id="profileModal">
-        <div class="neu-card">
-            <h3>Профіль</h3>
-            <select id="gender"><option value="male">Чоловік</option><option value="female">Жінка</option></select>
-            <input type="number" id="weight" placeholder="Вага (кг)">
-            <input type="number" id="height" placeholder="Зріст (см)">
-            <input type="number" id="age" placeholder="Вік">
-            <select id="goal"><option value="lose">Схуднути</option><option value="maintain">Підтримка</option><option value="gain">Набір</option></select>
-            <button class="neu-btn" style="width:100%; margin-top:20px; background:var(--accent); color:white;" onclick="saveProfile()">ЗБЕРЕГТИ</button>
-        </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="margin:0; font-size: 22px;">Мій Баланс</h2>
+        <button class="neu-btn" style="padding: 10px 18px; color: var(--blue); font-size: 14px;" onclick="openProfile()">⚙️ Профіль</button>
     </div>
 
     <div class="calendar" id="calendar"></div>
 
-    <div class="neu-card" style="text-align: center;">
-        <div class="circle-container"><h1 id="kcal_left">0</h1><p style="font-size:10px; color:#888;">залишилось</p></div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; font-size:11px; margin-bottom: 15px;">
-            <div>Б: <b id="p_val">0</b>г</div><div>Ж: <b id="f_val">0</b>г</div><div>В: <b id="c_val">0</b>г</div>
+    <div class="neu-card" style="text-align: center; margin-top: 10px;">
+        <div class="circle-box">
+            <svg viewBox="0 0 180 180">
+                <circle class="bg-circle" cx="90" cy="90" r="80"></circle>
+                <circle id="kcal_circle" class="fg-circle" cx="90" cy="90" r="80"></circle>
+            </svg>
+            <div class="circle-text">
+                <h1 id="kcal_left" style="margin:0; font-size:38px; font-weight: 800;">0</h1>
+                <p style="font-size:11px; margin:0; font-weight: 600; opacity: 0.6;">ККАЛ ЗАЛИШИЛОСЬ</p>
+                <p style="font-size:11px; margin-top:4px; color:var(--blue); font-weight: 700;">мета: <span id="kcal_norm">0</span></p>
+            </div>
         </div>
-        <div style="border-top: 1px solid rgba(0,0,0,0.05); padding-top: 15px; display: flex; justify-content: space-around; font-size: 10px; color: #666;">
-            <div>🍭 Цукор: <b id="sug_val">0</b>/25г</div><div>🧂 Сіль: <b id="salt_val">0</b>/5г</div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
+            <div class="macro-container">
+                <div class="macro-label"><span>Б</span><span id="p_txt">0/0г</span></div>
+                <div class="macro-bar"><div id="p_bar" class="macro-progress" style="background: #10b981;"></div></div>
+            </div>
+            <div class="macro-container">
+                <div class="macro-label"><span>Ж</span><span id="f_txt">0/0г</span></div>
+                <div class="macro-bar"><div id="f_bar" class="macro-progress" style="background: #f59e0b;"></div></div>
+            </div>
+            <div class="macro-container">
+                <div class="macro-label"><span>В</span><span id="c_txt">0/0г</span></div>
+                <div class="macro-bar"><div id="c_bar" class="macro-progress" style="background: #3b82f6;"></div></div>
+            </div>
         </div>
     </div>
 
-    <div class="neu-card" style="padding: 10px 20px;">
-        <div class="meal-row" onclick="openScan('Breakfast')"><b>🍳 Сніданок</b><span id="m_b">0 ккал</span></div>
-        <div class="meal-row" onclick="openScan('Lunch')"><b>🍲 Обід</b><span id="m_l">0 ккал</span></div>
-        <div class="meal-row" onclick="openScan('Dinner')"><b>🥗 Вечеря</b><span id="m_d">0 ккал</span></div>
-        <div class="meal-row" onclick="openScan('Snack')"><b>🍎 Перекус</b><span id="m_s">0 ккал</span></div>
+    <div class="neu-card" style="padding: 5px 20px;">
+        <div class="meal-row" style="display:flex; justify-content:space-between; padding:18px 0; border-bottom:1px solid #f1f5f9; cursor:pointer;" onclick="askType('Breakfast')"><b>🍳 Сніданок</b><span id="m_b" style="color:var(--accent); font-weight:700;">0 ккал</span></div>
+        <div class="meal-row" style="display:flex; justify-content:space-between; padding:18px 0; border-bottom:1px solid #f1f5f9; cursor:pointer;" onclick="askType('Lunch')"><b>🍲 Обід</b><span id="m_l" style="color:var(--accent); font-weight:700;">0 ккал</span></div>
+        <div class="meal-row" style="display:flex; justify-content:space-between; padding:18px 0; border-bottom:1px solid #f1f5f9; cursor:pointer;" onclick="askType('Dinner')"><b>🥗 Вечеря</b><span id="m_d" style="color:var(--accent); font-weight:700;">0 ккал</span></div>
+        <div class="meal-row" style="display:flex; justify-content:space-between; padding:18px 0; cursor:pointer;" onclick="askType('Snack')"><b>🍎 Перекус</b><span id="m_s" style="color:var(--accent); font-weight:700;">0 ккал</span></div>
     </div>
 
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-        <button class="neu-btn" onclick="addW()">💧 +0.25л (<span id="w_val">0</span>л)</button>
-        <button class="neu-btn" onclick="tg.showPopup({message:'Чат з ШІ доступний у Premium'})">💬 Тренер</button>
-    </div>
+    <div id="food_list_container"></div>
+
+    <button class="neu-btn" style="width:100%; padding:20px; background:var(--blue); color:white; font-size:17px; margin-top:10px; border-radius: 18px;" onclick="addW()">💧 Випити води (0.25л) — <span id="w_val">0</span>л</button>
+
+    <div id="inputModal"><div class="modal-content">
+        <h3 style="margin-top:0;">Додати страву</h3>
+        <button class="neu-btn" style="width:100%; background:var(--accent); color:white; margin-bottom:12px; height: 55px;" onclick="document.getElementById('fIn').click()">📸 Зробити фото</button>
+        <textarea id="textFood" rows="3" placeholder="Або напишіть текст, наприклад: 'Салат цезар та сік'"></textarea>
+        <div style="display:flex; gap:12px; margin-top:20px;">
+            <button class="neu-btn" style="flex:1" onclick="closeModal('inputModal')">Назад</button>
+            <button class="neu-btn" style="flex:1; background:var(--blue); color:white;" onclick="doUpload()">Додати</button>
+        </div>
+    </div></div>
+
+    <div id="profileModal"><div class="modal-content">
+        <h3 style="margin-top:0;">Параметри тіла</h3>
+        <select id="gender"><option value="male">Чоловік</option><option value="female">Жінка</option></select>
+        <input type="number" id="weight" placeholder="Вага (кг)">
+        <input type="number" id="height" placeholder="Зріст (см)">
+        <input type="number" id="age" placeholder="Вік (повних років)">
+        <select id="goal">
+            <option value="lose">Схуднення 🔥</option><option value="maintain">Підтримка ваги ⚖️</option>
+            <option value="gain">Набір маси 🍗</option><option value="muscle">Рельєф та м'язи 💪</option>
+        </select>
+        <button class="neu-btn" style="width:100%; margin-top:25px; background:var(--blue); color:white; height: 55px;" onclick="saveProfile()">Зберегти зміни</button>
+    </div></div>
 
     <input type="file" id="fIn" style="display:none" onchange="doUpload()">
 
@@ -70,12 +113,10 @@
         const tg = window.Telegram.WebApp;
         const uid = tg.initDataUnsafe.user?.id || "test_user";
         const API = "https://fitness-app-production-b4a3.up.railway.app";
-        let activeMeal = "";
-        let selectedDate = new Date().toISOString().split('T')[0];
+        let activeMeal = "", selectedDate = new Date().toISOString().split('T')[0];
 
         function initCalendar() {
-            const container = document.getElementById('calendar');
-            container.innerHTML = '';
+            const container = document.getElementById('calendar'); container.innerHTML = '';
             for (let i = -6; i <= 0; i++) {
                 const d = new Date(); d.setDate(d.getDate() + i);
                 const iso = d.toISOString().split('T')[0];
@@ -85,41 +126,64 @@
                 item.onclick = () => { selectedDate = iso; initCalendar(); load(); };
                 container.appendChild(item);
             }
-            container.scrollLeft = container.scrollWidth;
         }
 
         async function load() {
-            try {
-                const r = await fetch(`${API}/stats?user_id=${uid}&date=${selectedDate}`);
-                const d = await r.json();
-                if(!d.has_profile && uid !== "test_user") document.getElementById('profileModal').style.display = 'block';
-                document.getElementById('kcal_left').innerText = Math.max(0, d.norm - d.kcal);
-                document.getElementById('p_val').innerText = d.p;
-                document.getElementById('f_val').innerText = d.f;
-                document.getElementById('c_val').innerText = d.c;
-                document.getElementById('sug_val').innerText = d.sugar || 0;
-                document.getElementById('salt_val').innerText = d.salt || 0;
-                document.getElementById('w_val').innerText = d.water;
-                document.getElementById('m_b').innerText = d.meals.Breakfast + " ккал";
-                document.getElementById('m_l').innerText = d.meals.Lunch + " ккал";
-                document.getElementById('m_d').innerText = d.meals.Dinner + " ккал";
-                document.getElementById('m_s').innerText = d.meals.Snack + " ккал";
-            } catch(e) { console.error(e); }
+            const r = await fetch(`${API}/stats?user_id=${uid}&date=${selectedDate}`);
+            const d = await r.json();
+            if(!d.has_profile) openProfile();
+
+            // Динамічне коло калорій
+            const kcalLeft = Math.max(0, d.norms.kcal - d.kcal);
+            document.getElementById('kcal_left').innerText = kcalLeft;
+            document.getElementById('kcal_norm').innerText = d.norms.kcal;
+            const kcalPct = Math.min(100, (d.kcal / d.norms.kcal) * 100);
+            document.getElementById('kcal_circle').style.strokeDashoffset = 502 - (502 * kcalPct) / 100;
+
+            // БЖВ у грамах
+            document.getElementById('p_txt').innerText = `${Math.round(d.p)}/${d.norms.p}г`;
+            document.getElementById('f_txt').innerText = `${Math.round(d.f)}/${d.norms.f}г`;
+            document.getElementById('c_txt').innerText = `${Math.round(d.c)}/${d.norms.c}г`;
+            
+            document.getElementById('p_bar').style.width = Math.min(100, (d.p / d.norms.p) * 100) + '%';
+            document.getElementById('f_bar').style.width = Math.min(100, (d.f / d.norms.f) * 100) + '%';
+            document.getElementById('c_bar').style.width = Math.min(100, (d.c / d.norms.c) * 100) + '%';
+
+            document.getElementById('w_val').innerText = d.water;
+            document.getElementById('m_b').innerText = d.meals.Breakfast + " ккал";
+            document.getElementById('m_l').innerText = d.meals.Lunch + " ккал";
+            document.getElementById('m_d').innerText = d.meals.Dinner + " ккал";
+            document.getElementById('m_s').innerText = d.meals.Snack + " ккал";
+
+            const list = document.getElementById('food_list_container');
+            list.innerHTML = d.food_list.length ? '<h4 style="margin:15px 0 10px;">Сьогодні ви з\'їли:</h4>' : '';
+            d.food_list.forEach(item => {
+                const div = document.createElement('div'); div.className = 'food-list-item';
+                div.innerHTML = `<div><b style="font-size:15px;">${item.name}</b><br><small style="color:#64748b;">${item.kcal} ккал | ${item.type}</small></div><button style="color:#ef4444; border:none; background:none; font-size:24px; font-weight:300;" onclick="deleteItem(${item.id})">×</button>`;
+                list.appendChild(div);
+            });
         }
 
+        function askType(t) { activeMeal = t; document.getElementById('inputModal').style.display = 'flex'; }
+        function openProfile() { document.getElementById('profileModal').style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        async function doUpload() {
+            const text = document.getElementById('textFood').value;
+            const file = document.getElementById('fIn').files[0];
+            tg.MainButton.setText("Аналізую страву...").show();
+            const fd = new FormData();
+            fd.append('user_id', uid); fd.append('meal_type', activeMeal); fd.append('date', selectedDate);
+            if(file) fd.append('file', file); if(text) fd.append('text_input', text);
+            await fetch(`${API}/analyze`, {method:'POST', body:fd});
+            document.getElementById('textFood').value = ''; closeModal('inputModal'); tg.MainButton.hide(); load();
+        }
+
+        async function deleteItem(id) { if(confirm("Видалити цей запис?")) { await fetch(`${API}/delete_food/${id}`, {method:'DELETE'}); load(); } }
         async function saveProfile() {
             const data = { user_id: uid, gender: document.getElementById('gender').value, weight: document.getElementById('weight').value, height: document.getElementById('height').value, age: document.getElementById('age').value, goal: document.getElementById('goal').value };
             await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-            document.getElementById('profileModal').style.display = 'none';
-            load();
-        }
-
-        function openScan(type) { activeMeal = type; document.getElementById('fIn').click(); }
-        async function doUpload() {
-            const fd = new FormData(); fd.append('file', document.getElementById('fIn').files[0]);
-            tg.MainButton.setText("Аналізую...").show();
-            await fetch(`${API}/analyze?user_id=${uid}&meal_type=${activeMeal}&date=${selectedDate}`, {method:'POST', body:fd});
-            tg.MainButton.hide(); load();
+            closeModal('profileModal'); load();
         }
         async function addW() { await fetch(`${API}/add_water?user_id=${uid}&date=${selectedDate}&amount=0.25`, {method:'POST'}); load(); }
 
