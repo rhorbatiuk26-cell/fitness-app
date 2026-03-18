@@ -3,191 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitLio Pro</title>
+    <title>FitLio Pro 2026</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --bg: #f8fafc; --accent: #10b981; --indigo: #6366f1; --rose: #f43f5e; --amber: #f59e0b; --blue: #3b82f6; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; padding-bottom: 80px; }
+        :root { --bg: #f8fafc; --accent: #10b981; --indigo: #6366f1; --rose: #f43f5e; --amber: #f59e0b; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; padding-bottom: 90px; }
         .card { background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 12px; }
         .macro-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px; }
         .mini-ring { position: relative; text-align: center; font-size: 8px; font-weight: bold; cursor: pointer; }
         .mini-ring svg { transform: rotate(-90deg); width: 100%; }
         .ring-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box; font-size: 16px; }
-        .btn-main { background: var(--accent); color: white; width: 100%; padding: 15px; border-radius: 15px; border: none; font-weight: bold; font-size: 16px; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box; }
+        .btn-main { background: var(--accent); color: white; width: 100%; padding: 15px; border-radius: 15px; border: none; font-weight: bold; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        #onboarding { position: fixed; inset: 0; background: white; z-index: 2000; padding: 25px; display: none; overflow-y: auto; }
-        .food-item { background: #f8fafc; padding: 8px; border-radius: 10px; margin-top: 5px; font-size: 11px; color: #475569; border-left: 3px solid var(--indigo); }
-        .chat-btn { position: fixed; bottom: 20px; right: 20px; background: var(--indigo); color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .chat-fab { position: fixed; bottom: 20px; left: 20px; background: var(--indigo); color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
-    <div id="onboarding">
-        <h3>Твій профіль 🚀</h3>
-        <select id="reg_goal">
-            <option value="Схуднення">🔥 Схуднення</option>
-            <option value="Баланс">⚖️ Баланс</option>
-            <option value="М'язи">💪 Ріст м'язів</option>
-        </select>
+    <div id="onboarding" class="modal" style="display:none; background:white; flex-direction:column; padding:25px; overflow-y:auto;">
+        <h3>Налаштування профілю ⚙️</h3>
+        <select id="reg_goal"><option value="Схуднення">Схуднення</option><option value="Баланс">Баланс</option><option value="М'язи">Ріст м'язів</option></select>
         <input id="reg_tw" type="number" placeholder="Бажана вага (кг)">
         <input id="reg_w" type="number" placeholder="Поточна вага (кг)">
         <input id="reg_h" type="number" placeholder="Зріст (см)">
         <input id="reg_a" type="number" placeholder="Вік">
-        <button class="btn-main" onclick="startSetup()">Зберегти та прорахувати</button>
+        <button class="btn-main" onclick="saveProfile()">Зберегти</button>
+        <button onclick="document.getElementById('onboarding').style.display='none'" style="margin-top:10px; background:none; border:none; color:gray;">Закрити</button>
     </div>
 
     <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
         <span onclick="changeDay(-1)">◀</span>
         <b id="dateTitle">Сьогодні</b>
         <span onclick="changeDay(1)">▶</span>
+        <span onclick="document.getElementById('onboarding').style.display='flex'">⚙️</span>
     </div>
 
     <div class="card" style="text-align:center;">
         <div style="position:relative; display:inline-block; margin-bottom:10px;">
-            <svg width="120" height="120" viewBox="0 0 160 160">
-                <circle stroke="#eee" stroke-width="12" fill="none" cx="80" cy="80" r="72"/>
-                <circle id="ring_kcal" stroke="var(--accent)" stroke-width="12" stroke-dasharray="452" fill="none" cx="80" cy="80" r="72" style="transform:rotate(-90deg); transform-origin:center; transition: 0.5s;"/>
-            </svg>
-            <div class="ring-inner"><b id="txt_kcal_left" style="font-size:22px;">0</b><small id="txt_goal_label">ккал</small></div>
+            <svg width="120" height="120" viewBox="0 0 160 160"><circle stroke="#eee" stroke-width="12" fill="none" cx="80" cy="80" r="72"/><circle id="ring_kcal" stroke="var(--accent)" stroke-width="12" stroke-dasharray="452" fill="none" cx="80" cy="80" r="72" style="transform:rotate(-90deg); transform-origin:center; transition: 0.5s;"/></svg>
+            <div class="ring-inner"><b id="txt_kcal_left" style="font-size:22px;">0</b><small id="txt_goal">ккал</small></div>
         </div>
         <div class="macro-grid" id="macro_circles"></div>
     </div>
 
     <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-        <span>💧 Вода: <b id="txt_water">0</b> / 2.0 л</span>
-        <button onclick="addWater()" style="background:var(--blue); color:white; border:none; padding:8px 15px; border-radius:12px;">+0.25л</button>
+        <span>💧 Вода: <b id="txt_water">0</b>л</span>
+        <button onclick="addWater()" style="background:var(--blue); color:white; border:none; padding:8px 12px; border-radius:10px;">+0.25</button>
     </div>
 
     <div id="meal_list"></div>
 
-    <div class="chat-btn" onclick="toggleChat()">💬</div>
-    
-    <div id="drillModal" class="modal" onclick="this.style.display='none'"><div class="card" style="width:85%; max-height: 70vh; overflow-y: auto;" onclick="event.stopPropagation()">
-        <h3 id="drillTitle">Деталі</h3>
-        <div id="drillList"></div>
-    </div></div>
+    <div class="chat-fab" onclick="document.getElementById('chatModal').style.display='flex'">💬</div>
 
-    <div id="addModal" class="modal"><div class="card" style="width:85%;">
-        <h3>Додати їжу</h3>
-        <button onclick="document.getElementById('fIn').click()" style="width:100%; padding:15px; border-radius:12px; border:none; background:#eee;">📸 Фото страви</button>
-        <textarea id="tIn" placeholder="Або введи текст..." style="width:100%; height:80px; margin-top:10px; border-radius:12px; padding:10px; border:1px solid #ddd;"></textarea>
-        <button class="btn-main" onclick="doAnalyze()" style="margin-top:10px;">Аналізувати ШІ</button>
+    <div id="chatModal" class="modal"><div class="card" style="width:90%; height:70%; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between;"><b>AI Дієтолог</b> <span onclick="document.getElementById('chatModal').style.display='none'">✕</span></div>
+        <div id="chatMsgs" style="flex:1; overflow-y:auto; font-size:13px; margin:10px 0;"></div>
+        <input id="chatIn" placeholder="Запитай..."><button class="btn-main" onclick="sendChat()">🚀</button>
     </div></div>
-
-    <div id="confirmModal" class="modal"><div class="card" style="width:85%;">
-        <h3>Це воно?</h3>
-        <input id="resN"><input id="resK" type="number">
-        <button class="btn-main" onclick="finalSave()">Так, зберегти</button>
-    </div></div>
-
-    <div id="chatModal" class="modal"><div class="card" style="width:90%; height:80%; display:flex; flex-direction:column;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><b>AI Дієтолог</b> <span onclick="toggleChat()">✕</span></div>
-        <div id="chatMsgs" style="flex:1; overflow-y:auto; font-size:14px; margin-bottom:10px;"></div>
-        <input id="chatIn" placeholder="Запитай що завгодно..."><button class="btn-main" onclick="sendChat()">🚀</button>
-    </div></div>
-
-    <input type="file" id="fIn" style="display:none" onchange="doAnalyze()">
 
     <script>
         const tg = window.Telegram.WebApp; const uid = tg.initDataUnsafe.user?.id || "test_user";
         const API = "https://fitness-app-production-b4a3.up.railway.app";
-        let selDate = new Date().toISOString().split('T')[0], activeM = "", currentData = {};
+        let selDate = new Date().toISOString().split('T')[0];
 
         async function load() {
             const r = await fetch(`${API}/stats?user_id=${uid}&date=${selDate}`);
             const d = await r.json();
             if(!d.norms) { document.getElementById('onboarding').style.display='flex'; return; }
-            document.getElementById('onboarding').style.display='none';
-            currentData = d;
-
             document.getElementById('dateTitle').innerText = selDate === new Date().toISOString().split('T')[0] ? "Сьогодні" : selDate;
             document.getElementById('ring_kcal').style.strokeDashoffset = 452 - (452 * Math.min(1, d.totals.kcal / d.norms.kcal));
             document.getElementById('txt_kcal_left').innerText = Math.max(0, d.norms.kcal - d.totals.kcal);
-            document.getElementById('txt_goal_label').innerText = d.norms.goal;
             document.getElementById('txt_water').innerText = d.water;
-
-            const mks = [
-                {id:'p', n:'Біл', c:'var(--accent)', v:d.totals.p, m:d.norms.p},
-                {id:'f', n:'Жир', c:'var(--amber)', v:d.totals.f, m:d.norms.f},
-                {id:'c', n:'Вуг', c:'var(--blue)', v:d.totals.c, m:d.norms.c},
-                {id:'sugar', n:'Цук', c:'var(--rose)', v:d.totals.sugar, m:d.norms.sugar},
-                {id:'salt', n:'Сіль', c:'#94a3b8', v:d.totals.salt, m:d.norms.salt}
-            ];
-            document.getElementById('macro_circles').innerHTML = mks.map(m => `
-                <div class="mini-ring" onclick="showDrill('${m.id}', '${m.n}')">
-                    <svg viewBox="0 0 80 80"><circle stroke="#eee" cx="40" cy="40" r="36"/><circle stroke="${m.c}" stroke-dasharray="226" stroke-dashoffset="${226-(226*Math.min(1, m.v/m.m))}" cx="40" cy="40" r="36"/></svg>
-                    <div class="ring-inner"><b>${Math.round(m.v)}</b><div style="color:gray;font-size:7px;">/${m.m}г</div></div>
-                    <div>${m.n}</div>
-                </div>
-            `).join('');
-
+            
+            const mks = [{id:'p',n:'Біл',c:'var(--accent)',v:d.totals.p,m:d.norms.p},{id:'f',n:'Жир',c:'var(--amber)',v:d.totals.f,m:d.norms.f},{id:'c',n:'Вуг',c:'var(--indigo)',v:d.totals.c,m:d.norms.c},{id:'sugar',n:'Цук',c:'var(--rose)',v:d.totals.sugar,m:d.norms.sugar},{id:'salt',n:'Сіль',c:'gray',v:d.totals.salt,m:d.norms.salt}];
+            document.getElementById('macro_circles').innerHTML = mks.map(m => `<div class="mini-ring"><svg viewBox="0 0 80 80"><circle stroke="#eee" cx="40" cy="40" r="36"/><circle stroke="${m.c}" stroke-dasharray="226" stroke-dashoffset="${226-(226*Math.min(1, m.v/m.m))}" cx="40" cy="40" r="36"/></svg><div class="ring-inner"><b>${Math.round(m.v)}</b><div style="font-size:7px;">/${m.m}</div></div><div>${m.n}</div></div>`).join('');
+            
             const meals = {Breakfast:"🍳 Сніданок", Snack1:"🍎 Перекус 1", Lunch:"🍲 Обід", Snack2:"🍌 Перекус 2", Dinner:"🥗 Вечеря"};
             let h = "";
             for(let k in meals) {
-                h += `<div class="card" onclick="toggleM('${k}')">
-                    <div style="display:flex; justify-content:space-between; align-items:center;"><b>${meals[k]}</b> <span>${d.meals[k].kcal} кк <button onclick="event.stopPropagation(); openAdd('${k}')" style="background:#f0fdf4; color:var(--accent); border:none; padding:5px 10px; border-radius:8px;">+</button></span></div>
-                    <div id="det_${k}" style="display:none; margin-top:10px;">
-                        ${d.meals[k].list.map(i => `<div class="food-item"><b>${i.food_name}</b><br>Б:${i.protein} Ж:${i.fat} В:${i.carbs} Ц:${i.sugar} С:${i.salt}</div>`).join('')}
-                    </div>
-                </div>`;
+                h += `<div class="card"><b>${meals[k]}</b> <span>${d.meals[k].kcal} ккал</span><div style="font-size:10px; color:gray;">${d.meals[k].list.map(i => i.food_name).join(', ')}</div></div>`;
             }
             document.getElementById('meal_list').innerHTML = h;
         }
 
-        async function startSetup() {
-            const data = {goal:document.getElementById('reg_goal').value, tw:document.getElementById('reg_tw').value, w:document.getElementById('reg_w').value, h:document.getElementById('reg_h').value, a:document.getElementById('reg_a').value};
-            const r = await fetch(`${API}/calculate_norms`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-            const n = await r.json();
-            await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:uid, ...data, ...n})});
-            load();
-        }
-
-        function showDrill(id, name) {
-            let h = "";
-            for(let k in currentData.meals) {
-                currentData.meals[k].list.forEach(i => {
-                    if(i[id] > 0) h += `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;"><span>${i.food_name}</span><b>+${i[id]}г</b></div>`;
-                });
-            }
-            document.getElementById('drillTitle').innerText = name;
-            document.getElementById('drillList').innerHTML = h || "Порожньо";
-            document.getElementById('drillModal').style.display = 'flex';
-        }
-
-        function toggleM(m) { const el = document.getElementById('det_'+m); el.style.display = el.style.display==='block'?'none':'block'; }
-        function openAdd(m) { activeM = m; document.getElementById('addModal').style.display='flex'; }
-        function changeDay(s) { let d=new Date(selDate); d.setDate(d.getDate()+s); selDate=d.toISOString().split('T')[0]; load(); }
-        async function addWater() { await fetch(`${API}/add_water?user_id=${uid}&date=${selDate}&amount=0.25`, {method:'POST'}); load(); }
-        function toggleChat() { const m = document.getElementById('chatModal'); m.style.display = m.style.display==='flex'?'none':'flex'; }
-
-        async function doAnalyze() {
-            const fd = new FormData();
-            if(document.getElementById('fIn').files[0]) fd.append('file', document.getElementById('fIn').files[0]);
-            if(document.getElementById('tIn').value) fd.append('text_input', document.getElementById('tIn').value);
-            const r = await fetch(`${API}/analyze`, {method:'POST', body:fd});
-            currentData.lastAi = await r.json();
-            document.getElementById('resN').value = currentData.lastAi.name;
-            document.getElementById('resK').value = currentData.lastAi.kcal;
-            document.getElementById('addModal').style.display='none';
-            document.getElementById('confirmModal').style.display='flex';
-        }
-
-        async function finalSave() {
-            const data = {user_id:uid, meal_type:activeM, date:selDate, ...currentData.lastAi, name:document.getElementById('resN').value, kcal:document.getElementById('resK').value};
-            await fetch(`${API}/confirm_save`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-            document.getElementById('confirmModal').style.display='none'; load();
+        async function saveProfile() {
+            const data = {user_id:uid, goal:document.getElementById('reg_goal').value, tw:document.getElementById('reg_tw').value, w:document.getElementById('reg_w').value, h:document.getElementById('reg_h').value, a:document.getElementById('reg_a').value};
+            await fetch(`${API}/setup`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            document.getElementById('onboarding').style.display='none'; load();
         }
 
         async function sendChat() {
             const i = document.getElementById('chatIn'); const txt = i.value; i.value = "";
-            document.getElementById('chatMsgs').innerHTML += `<div style="text-align:right; color:var(--indigo);"><b>Ти:</b> ${txt}</div>`;
             const fd = new FormData(); fd.append('msg', txt);
             const r = await fetch(`${API}/chat`, {method:'POST', body:fd});
             const d = await r.json();
-            document.getElementById('chatMsgs').innerHTML += `<div><b>AI:</b> ${d.reply}</div>`;
+            document.getElementById('chatMsgs').innerHTML += `<div><b>Ви:</b> ${txt}<br><b>AI:</b> ${d.reply}</div><hr>`;
         }
 
+        function changeDay(s) { let d=new Date(selDate); d.setDate(d.getDate()+s); selDate=d.toISOString().split('T')[0]; load(); }
+        async function addWater() { await fetch(`${API}/water?user_id=${uid}&date=${selDate}&amount=0.25`, {method:'POST'}); load(); }
+        
         load(); tg.expand();
     </script>
 </body>
