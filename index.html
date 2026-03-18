@@ -6,183 +6,148 @@
     <title>FitLio Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --accent: #10b981; --blue: #3b82f6; --pink: #ec4899; --indigo: #6366f1; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
-        .neu-card { background: var(--card); border-radius: 24px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); margin-bottom: 15px; }
+        :root { --bg: #f8fafc; --card: #ffffff; --accent: #10b981; --indigo: #6366f1; --blue: #3b82f6; --text: #1e293b; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; padding-bottom: 90px; }
+        
+        /* ГАРНИЙ КАЛЕНДАР */
+        .calendar-nav { display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 18px; border-radius: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .calendar-nav input { border: none; font-size: 16px; font-weight: 800; color: var(--indigo); cursor: pointer; background: transparent; text-align: center; width: 120px; }
+        .nav-arrow { font-size: 24px; color: var(--indigo); cursor: pointer; user-select: none; }
+
+        .neu-card { background: var(--card); border-radius: 30px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); margin-bottom: 15px; text-align: center; }
         .macro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
-        .ring-box { position: relative; width: 85px; height: 85px; margin: 0 auto; text-align: center; cursor: pointer; }
-        .ring-box svg { transform: rotate(-90deg); width: 85px; height: 85px; }
-        circle { fill: none; stroke-width: 6; stroke-linecap: round; }
-        .ring-fg { stroke-dasharray: 226; stroke-dashoffset: 226; transition: 0.6s ease; }
-        .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; pointer-events: none; }
-        .ring-label b { font-size: 11px; }
-        .ring-label small { font-size: 8px; color: #64748b; text-transform: uppercase; }
-        .meal-card { background: #fff; border-radius: 18px; padding: 15px; margin-bottom: 10px; border: 1px solid #f1f5f9; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
-        .btn { border: none; border-radius: 12px; padding: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-main { background: var(--accent); color: white; width: 100%; }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px); }
-        .modal-content { width: 85%; background: #fff; padding: 25px; border-radius: 30px; max-height: 80vh; overflow-y: auto; }
-        .chat-btn { position: fixed; bottom: 20px; right: 20px; background: var(--indigo); color: white; width: 60px; height: 60px; border-radius: 30px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 10px 20px rgba(99,102,241,0.3); }
-        .food-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f8fafc; font-size: 14px; }
-        input, textarea { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 10px; box-sizing: border-box; font-size: 16px; }
+        .ring-box { position: relative; width: 100%; }
+        .ring-box svg { transform: rotate(-90deg); width: 80px; height: 80px; }
+        circle { fill: none; stroke-width: 7; stroke-linecap: round; }
+        .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+        .ring-label b { font-size: 13px; }
+        .ring-label small { font-size: 8px; color: #64748b; font-weight: bold; }
+
+        .meal-card { background: white; border-radius: 20px; padding: 16px; margin-bottom: 10px; border: 1px solid #f1f5f9; }
+        .meal-header { display: flex; justify-content: space-between; align-items: center; }
+        .btn-plus { background: #eff6ff; color: var(--blue); border: none; width: 36px; height: 36px; border-radius: 12px; font-size: 22px; font-weight: bold; cursor: pointer; }
+        
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { width: 85%; background: white; padding: 25px; border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
+        .btn-main { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 18px; width: 100%; font-weight: 700; margin-top: 10px; cursor: pointer; }
+        .food-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        .copy-btn { font-size: 12px; color: var(--indigo); text-decoration: underline; cursor: pointer; margin-bottom: 15px; display: block; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
-        <input type="date" id="datePicker" style="border:none; background:none; font-weight:bold; color:var(--indigo);" onchange="changeDate()">
-        <div style="flex-grow:1"></div>
-        <button class="btn" style="background:none; font-size:24px;" onclick="openModal('profileModal')">⚙️</button>
+    <div class="calendar-nav">
+        <span class="nav-arrow" onclick="changeDay(-1)">‹</span>
+        <input type="date" id="datePicker" onchange="load()">
+        <span class="nav-arrow" onclick="changeDay(1)">›</span>
     </div>
 
+    <span class="copy-btn" onclick="copyPrev()">👯 Копіювати вчорашній день</span>
+
     <div class="neu-card">
-        <div style="text-align:center; position:relative; margin-bottom:15px;">
-            <svg width="150" height="150" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
+        <div style="position:relative; display:inline-block;">
+            <svg width="140" height="140" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
                 <circle stroke="#f1f5f9" stroke-width="12" cx="80" cy="80" r="72"></circle>
                 <circle id="m_ring" stroke="var(--accent)" stroke-width="12" stroke-dasharray="452" cx="80" cy="80" r="72"></circle>
             </svg>
             <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
-                <h2 id="k_left" style="margin:0; font-size:32px;">0</h2><small style="color:#64748b;">ккал ще можна</small>
+                <h2 id="k_left" style="margin:0; font-size:28px;">0</h2><small>залишилось</small>
             </div>
         </div>
         <div class="macro-grid">
-            <div class="ring-box" onclick="showSort('p', 'Білки')"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_p" class="ring-fg" stroke="var(--accent)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_p">0</b><small>БІЛОК</small></div></div>
-            <div class="ring-box" onclick="showSort('f', 'Жири')"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_f" class="ring-fg" stroke="#f59e0b" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_f">0</b><small>ЖИРИ</small></div></div>
-            <div class="ring-box" onclick="showSort('c', 'Вугл')"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_c" class="ring-fg" stroke="var(--blue)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_c">0</b><small>ВУГЛ</small></div></div>
-            <div class="ring-box" onclick="showSort('sugar', 'Цукор')"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_sugar" class="ring-fg" stroke="var(--pink)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_sugar">0</b><small>ЦУКОР</small></div></div>
-            <div class="ring-box" onclick="showSort('salt', 'Сіль')"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_salt" class="ring-fg" stroke="var(--indigo)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_salt">0</b><small>СІЛЬ</small></div></div>
-            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_water" class="ring-fg" stroke="#0ea5e9" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_water">0</b><small>ВОДА</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_p" stroke="var(--accent)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_p">0</b><small>БІЛКИ</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_f" stroke="#f59e0b" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_f">0</b><small>ЖИРИ</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_c" stroke="var(--blue)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_c">0</b><small>ВУГЛЕВ</small></div></div>
         </div>
-    </div>
-
-    <div class="neu-card" style="display:flex; justify-content:space-between; align-items:center;">
-        <div><b>💧 Трекер води</b><br><small id="w_txt" style="color:#64748b;">0 / 2.5 л</small></div>
-        <button class="btn" style="background:var(--blue); color:white; padding:10px 20px;" onclick="addWater()">+0.25л</button>
     </div>
 
     <div id="meals_list">
-        <div class="meal-card" onclick="toggleMeal('Breakfast')"><b>🍳 Сніданок</b>: <span id="k_Breakfast">0</span> ккал <button class="btn" style="float:right; padding:2px 10px; background:#f1f5f9;" onclick="event.stopPropagation(); openAdd('Breakfast')">+</button><div id="det_Breakfast" style="display:none; margin-top:10px;"></div></div>
-        <div class="meal-card" onclick="toggleMeal('Snack1')"><b>🍎 Перекус 1</b>: <span id="k_Snack1">0</span> ккал <button class="btn" style="float:right; padding:2px 10px; background:#f1f5f9;" onclick="event.stopPropagation(); openAdd('Snack1')">+</button><div id="det_Snack1" style="display:none; margin-top:10px;"></div></div>
-        <div class="meal-card" onclick="toggleMeal('Lunch')"><b>🍲 Обід</b>: <span id="k_Lunch">0</span> ккал <button class="btn" style="float:right; padding:2px 10px; background:#f1f5f9;" onclick="event.stopPropagation(); openAdd('Lunch')">+</button><div id="det_Lunch" style="display:none; margin-top:10px;"></div></div>
-        <div class="meal-card" onclick="toggleMeal('Snack2')"><b>🍌 Перекус 2</b>: <span id="k_Snack2">0</span> ккал <button class="btn" style="float:right; padding:2px 10px; background:#f1f5f9;" onclick="event.stopPropagation(); openAdd('Snack2')">+</button><div id="det_Snack2" style="display:none; margin-top:10px;"></div></div>
-        <div class="meal-card" onclick="toggleMeal('Dinner')"><b>🥗 Вечеря</b>: <span id="k_Dinner">0</span> ккал <button class="btn" style="float:right; padding:2px 10px; background:#f1f5f9;" onclick="event.stopPropagation(); openAdd('Dinner')">+</button><div id="det_Dinner" style="display:none; margin-top:10px;"></div></div>
+        <div class="meal-card" onclick="toggleM('Breakfast')"><div class="meal-header"><b>🍳 Сніданок</b> <span id="k_Breakfast">0</span> <button class="btn-plus" onclick="event.stopPropagation(); openAdd('Breakfast')">+</button></div><div id="det_Breakfast" style="display:none; margin-top:10px;"></div></div>
+        <div class="meal-card" onclick="toggleM('Snack1')"><div class="meal-header"><b>🍎 Перекус 1</b> <span id="k_Snack1">0</span> <button class="btn-plus" onclick="event.stopPropagation(); openAdd('Snack1')">+</button></div><div id="det_Snack1" style="display:none; margin-top:10px;"></div></div>
+        <div class="meal-card" onclick="toggleM('Lunch')"><div class="meal-header"><b>🍲 Обід</b> <span id="k_Lunch">0</span> <button class="btn-plus" onclick="event.stopPropagation(); openAdd('Lunch')">+</button></div><div id="det_Lunch" style="display:none; margin-top:10px;"></div></div>
+        <div class="meal-card" onclick="toggleM('Snack2')"><div class="meal-header"><b>🍌 Перекус 2</b> <span id="k_Snack2">0</span> <button class="btn-plus" onclick="event.stopPropagation(); openAdd('Snack2')">+</button></div><div id="det_Snack2" style="display:none; margin-top:10px;"></div></div>
+        <div class="meal-card" onclick="toggleM('Dinner')"><div class="meal-header"><b>🥗 Вечеря</b> <span id="k_Dinner">0</span> <button class="btn-plus" onclick="event.stopPropagation(); openAdd('Dinner')">+</button></div><div id="det_Dinner" style="display:none; margin-top:10px;"></div></div>
     </div>
 
-    <div id="weightModal" class="modal"><div class="modal-content">
-        <h2>⚖️ Час зважування!</h2>
-        <p>Для точного регулювання харчування оновіть вашу вагу за цей тиждень:</p>
-        <input id="newWeight" type="number" step="0.1" placeholder="Ваша вага (кг)">
-        <button class="btn btn-main" style="margin-top:20px;" onclick="saveWeeklyWeight()">Оновити вагу</button>
-    </div></div>
+    <div id="profileModal" class="modal"><div class="modal-content"><h3>Налаштування</h3><input id="p_w" type="number" placeholder="Вага кг"><input id="p_kcal" type="number" placeholder="Ціль Ккал"><button class="btn-main" onclick="saveProfile()">Зберегти</button></div></div>
+    <div id="weightModal" class="modal"><div class="modal-content"><h3>⚖️ Новий тиждень!</h3><p>Оновіть вашу вагу:</p><input id="newW" type="number"><button class="btn-main" onclick="saveWeeklyW()">Зберегти вагу</button></div></div>
+    <div id="addModal" class="modal"><div class="modal-content"><h3>Додати їжу</h3><button class="btn-main" onclick="document.getElementById('fIn').click()">📸 Зробити фото</button><textarea id="tIn" placeholder="Що ви з'їли?"></textarea><button class="btn-main" style="background:var(--indigo)" onclick="doAnalyze()">ШІ Аналіз</button></div></div>
+    <div id="confirmModal" class="modal"><div class="modal-content"><h3>Підтвердити</h3><input id="resN"><input id="resK" type="number"><button class="btn-main" onclick="finalSave()">Записати в щоденник</button></div></div>
 
-    <div id="chatModal" class="modal"><div class="modal-content">
-        <h3>Фітнес Тренер ШІ</h3>
-        <div id="chatBox" style="height:250px; overflow-y:auto; background:#f8fafc; padding:10px; border-radius:15px; margin-bottom:10px; font-size:14px;"></div>
-        <div style="display:flex; gap:5px;">
-            <input id="chatIn" placeholder="Запитайте про раціон...">
-            <button class="btn" style="background:var(--indigo); color:white;" onclick="askCoach()">➤</button>
-        </div>
-        <button class="btn" style="width:100%; margin-top:10px;" onclick="closeModal('chatModal')">Закрити</button>
-    </div></div>
-
-    <div id="profileModal" class="modal"><div class="modal-content"><h3>Ваші норми</h3><input id="p_w" type="number" placeholder="Вага"><input id="p_kcal" type="number" placeholder="Ціль Ккал"><button class="btn btn-main" style="margin-top:15px;" onclick="saveProfile()">Зберегти</button></div></div>
-    <div id="inputModal" class="modal"><div class="modal-content"><h3>Додати їжу</h3><button class="btn btn-main" onclick="document.getElementById('fIn').click()">📸 Зробити фото</button><textarea id="tFood" placeholder="Або напишіть текстом..."></textarea><button class="btn" style="width:100%; margin-top:10px; background:var(--blue); color:white;" onclick="doAnalyze()">Аналізувати ШІ</button></div></div>
-    <div id="confirmModal" class="modal"><div class="modal-content"><h3>Підтвердження</h3><input id="en"><input id="ek" type="number"><button class="btn btn-main" style="margin-top:20px;" onclick="finalSave()">Записати в щоденник</button></div></div>
-    <div id="sortModal" class="modal"><div class="modal-content"><h3 id="sortTitle"></h3><div id="sortList"></div><button class="btn" style="width:100%; margin-top:15px;" onclick="closeModal('sortModal')">Закрити</button></div></div>
-
-    <div class="chat-btn" onclick="openModal('chatModal')">💬</div>
     <input type="file" id="fIn" style="display:none" onchange="doAnalyze()">
 
     <script>
         const tg = window.Telegram.WebApp; const uid = tg.initDataUnsafe.user?.id || "test_user";
         const API = "https://fitness-app-production-b4a3.up.railway.app";
-        let selectedDate = new Date().toISOString().split('T')[0], activeMeal = "", lastStats = {};
-        document.getElementById('datePicker').value = selectedDate;
+        let activeM = "";
+
+        document.getElementById('datePicker').value = new Date().toISOString().split('T')[0];
 
         async function load() {
-            const r = await fetch(`${API}/stats?user_id=${uid}&date=${selectedDate}`);
-            const d = await r.json(); lastStats = d;
+            const date = document.getElementById('datePicker').value;
+            const r = await fetch(`${API}/stats?user_id=${uid}&date=${date}`);
+            const d = await r.json();
             
-            if(d.needs_weight) openModal('weightModal');
             if(!d.profile) openModal('profileModal');
+            if(d.needs_weight) openModal('weightModal');
 
             document.getElementById('k_left').innerText = Math.max(0, d.norms.kcal - d.kcal);
             document.getElementById('m_ring').style.strokeDashoffset = 452 - (452 * Math.min(1, d.kcal/d.norms.kcal));
             
-            const upR = (id, vId, v, n) => {
-                document.getElementById(id).style.strokeDashoffset = 226 - (226 * Math.min(1, v/(n || 1)));
-                document.getElementById(vId).innerText = Math.round(v || 0);
-            };
-            upR('r_p','v_p', d.p, d.norms.p); upR('r_f','v_f', d.f, d.norms.f); upR('r_c','v_c', d.c, d.norms.c);
-            upR('r_sugar','v_sugar', d.sugar, 50); upR('r_salt','v_salt', d.salt, 5); upR('r_water','v_water', d.water, 2.5);
-            document.getElementById('w_txt').innerText = `${d.water} / 2.5 л`;
-
-            ["Breakfast", "Snack1", "Lunch", "Snack2", "Dinner"].forEach(mt => {
-                const m = d.meals[mt] || {kcal:0, list:[]};
-                document.getElementById('k_'+mt).innerText = m.kcal;
-                document.getElementById('det_'+mt).innerHTML = m.list.map(i => `
-                    <div class="food-item">
-                        <span>${i.name} (<b>${i.kcal} ккал</b>)</span>
-                        <span style="color:var(--pink); cursor:pointer;" onclick="event.stopPropagation(); delFood(${i.id})">🗑️</span>
-                    </div>`).join('');
+            ["Breakfast","Snack1","Lunch","Snack2","Dinner"].forEach(m => {
+                document.getElementById('k_'+m).innerText = d.meals[m].kcal;
+                document.getElementById('det_'+m).innerHTML = d.meals[m].list.map(i => `
+                    <div class="food-item"><span>${i.name} (${i.kcal} ккал)</span><span onclick="delF(${i.id})" style="color:red">🗑️</span></div>
+                `).join('');
             });
         }
 
-        async function saveWeeklyWeight() {
-            const w = document.getElementById('newWeight').value;
-            if(!w) return;
-            await fetch(`${API}/save_weight`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:uid, weight:w})});
-            closeModal('weightModal'); load();
+        function changeDay(delta) {
+            let d = new Date(document.getElementById('datePicker').value);
+            d.setDate(d.getDate() + delta);
+            document.getElementById('datePicker').value = d.toISOString().split('T')[0];
+            load();
+        }
+
+        async function copyPrev() {
+            if(!confirm("Скопіювати вчорашній раціон?")) return;
+            await fetch(`${API}/copy_previous?user_id=${uid}&date=${document.getElementById('datePicker').value}`, {method:'POST'});
+            load();
         }
 
         async function saveProfile() {
-            const data = { user_id:String(uid), weight:document.getElementById('p_w').value, c_kcal:document.getElementById('p_kcal').value || 2000, c_p:120, c_f:70, c_c:250 };
-            await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({user_id:uid, weight:document.getElementById('p_w').value, c_kcal:document.getElementById('p_kcal').value})});
             closeModal('profileModal'); load();
         }
 
-        async function askCoach() {
-            const m = document.getElementById('chatIn').value; if(!m) return;
-            const b = document.getElementById('chatBox'); b.innerHTML += `<div style="text-align:right; margin-bottom:10px;"><b>Ви:</b> ${m}</div>`;
-            const r = await fetch(`${API}/coach_chat`, {method:'POST', headers:{'Content-Type':'application/json'}, 
-                body:JSON.stringify({msg:m, stats: JSON.stringify(lastStats.norms) + " Вага:" + lastStats.profile?.weight})});
-            const d = await r.json();
-            b.innerHTML += `<div style="color:var(--indigo); margin-bottom:10px;"><b>Тренер:</b> ${d.reply}</div>`;
-            document.getElementById('chatIn').value = ""; b.scrollTop = b.scrollHeight;
-        }
-
-        function showSort(key, label) {
-            let all = [];
-            ["Breakfast", "Snack1", "Lunch", "Snack2", "Dinner"].forEach(mt => { if(lastStats.meals[mt]) all = all.concat(lastStats.meals[mt].list); });
-            all.sort((a, b) => (b[key] || 0) - (a[key] || 0));
-            document.getElementById('sortTitle').innerText = "Топ за: " + label;
-            document.getElementById('sortList').innerHTML = all.map(i => `<div class="food-item"><span>${i.name} (<b>${i[key]}</b>)</span><span onclick="delFood(${i.id}); closeModal('sortModal')">🗑️</span></div>`).join('');
-            openModal('sortModal');
+        async function saveWeeklyW() {
+            await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({user_id:uid, weight:document.getElementById('newW').value, c_kcal:2000})});
+            closeModal('weightModal'); load();
         }
 
         async function doAnalyze() {
             const fd = new FormData();
             if(document.getElementById('fIn').files[0]) fd.append('file', document.getElementById('fIn').files[0]);
-            if(document.getElementById('tFood').value) fd.append('text_input', document.getElementById('tFood').value);
+            if(document.getElementById('tIn').value) fd.append('text_input', document.getElementById('tIn').value);
             const r = await fetch(`${API}/analyze`, {method:'POST', body:fd});
             const res = await r.json();
-            document.getElementById('en').value=res.name; document.getElementById('ek').value=res.kcal; 
-            closeModal('inputModal'); openModal('confirmModal');
+            document.getElementById('resN').value = res.name; document.getElementById('resK').value = res.kcal;
+            closeModal('addModal'); openModal('confirmModal');
         }
 
         async function finalSave() {
-            const data = { user_id:uid, date:selectedDate, meal_type:activeMeal, name:document.getElementById('en').value, kcal:document.getElementById('ek').value };
-            await fetch(`${API}/confirm_save`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            await fetch(`${API}/confirm_save`, {method:'POST', headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({user_id:uid, date:document.getElementById('datePicker').value, meal_type:activeM, name:document.getElementById('resN').value, kcal:document.getElementById('resK').value})});
             closeModal('confirmModal'); load();
         }
 
-        function changeDate() { selectedDate = document.getElementById('datePicker').value; load(); }
-        async function delFood(id) { if(confirm("Видалити?")) { await fetch(`${API}/delete_food/${id}`, {method:'DELETE'}); load(); } }
-        async function addWater() { await fetch(`${API}/add_water?user_id=${uid}&date=${selectedDate}&amount=0.25`, {method:'POST'}); load(); }
-        function toggleMeal(mt) { const d=document.getElementById('det_'+mt); d.style.display=d.style.display==='none'?'block':'none'; }
-        function openModal(id) { document.getElementById(id).style.display='flex'; }
-        function closeModal(id) { document.getElementById(id).style.display='none'; }
-        function openAdd(mt) { activeMeal=mt; openModal('inputModal'); }
+        async function delF(id) { if(confirm("Видалити запис?")) { await fetch(`${API}/delete_food/${id}`, {method:'DELETE'}); load(); } }
+        function toggleM(m) { const el = document.getElementById('det_'+m); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function openAdd(m) { activeM = m; openModal('addModal'); }
 
         load(); tg.expand();
     </script>
