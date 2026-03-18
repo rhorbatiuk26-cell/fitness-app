@@ -7,10 +7,10 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
-# Шлях до Volume на Railway
+# База даних у Volume для збереження даних
 DB_DIR = "/app/data"
 if not os.path.exists(DB_DIR): os.makedirs(DB_DIR, exist_ok=True)
-DATABASE_URL = f"sqlite:///{DB_DIR}/fitlio_pro_v4.db"
+DATABASE_URL = f"sqlite:///{DB_DIR}/fitlio_ultimate.db"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -56,15 +56,13 @@ async def get_stats(user_id: str, date: str, db: Session = Depends(get_db)):
     meals = {}
     for mt in ["Breakfast", "Snack1", "Lunch", "Snack2", "Dinner"]:
         items = [i for i in food if i.meal_type == mt]
-        meals[mt] = {"kcal": sum(i.calories for i in items), "list": [
-            {"id": i.id, "name": i.food_name, "kcal": i.calories, "p": i.protein, "f": i.fat, "c": i.carbs, "sugar": i.sugar, "salt": i.salt} 
-            for i in items]}
+        meals[mt] = {"kcal": sum(i.calories for i in items), "list": items}
     
     return {
         "totals": {
-            "kcal": sum(f.calories for f in food), "p": sum(f.protein for f in food), 
-            "f": sum(f.fat for f in food), "c": sum(f.carbs for f in food),
-            "sugar": sum(f.sugar for f in food), "salt": sum(f.salt for f in food)
+            "kcal": sum(f.calories for f in food), "p": round(sum(f.protein for f in food), 1), 
+            "f": round(sum(f.fat for f in food), 1), "c": round(sum(f.carbs for f in food), 1),
+            "sugar": round(sum(f.sugar for f in food), 1), "salt": round(sum(f.salt for f in food), 1)
         },
         "norms": {"kcal": p.c_kcal, "p": p.c_p, "f": p.c_f, "c": p.c_c, "sugar": p.c_sugar, "salt": p.c_salt} if p else None,
         "water": round(sum(w.amount for w in water), 2),
@@ -73,7 +71,7 @@ async def get_stats(user_id: str, date: str, db: Session = Depends(get_db)):
 
 @app.post("/calculate_norms")
 async def calc_norms(data: dict):
-    prompt = f"Розрахуй КБЖВ, цукор (до 50г) та сіль (до 5г) для: {data}. Поверни JSON: {{'kcal':2200,'p':140,'f':70,'c':250,'sugar':40,'salt':5}}"
+    prompt = f"Розрахуй КБЖВ, цукор (до 50г) та сіль (до 5г) для: {data}. JSON: {{'kcal':0,'p':0,'f':0,'c':0,'sugar':50,'salt':5}}"
     res = model.generate_content(prompt)
     return json.loads(res.text[res.text.find("{"):res.text.rfind("}")+1])
 
@@ -84,7 +82,7 @@ async def save_profile(data: dict, db: Session = Depends(get_db)):
 
 @app.post("/analyze")
 async def analyze(text_input: str = Form(None), file: UploadFile = File(None)):
-    prompt = "Return ONLY JSON: {'name': '...', 'kcal': 0, 'p': 0, 'f': 0, 'c': 0, 'sugar': 0, 'salt': 0}"
+    prompt = "Поверни JSON: {'name': '...', 'kcal': 0, 'p': 0, 'f': 0, 'c': 0, 'sugar': 0, 'salt': 0}"
     if file: res = model.generate_content([prompt, {"mime_type": "image/jpeg", "data": await file.read()}])
     else: res = model.generate_content(prompt + (text_input or ""))
     return json.loads(res.text[res.text.find("{"):res.text.rfind("}")+1])
@@ -92,12 +90,16 @@ async def analyze(text_input: str = Form(None), file: UploadFile = File(None)):
 @app.post("/confirm_save")
 async def confirm_save(data: dict, db: Session = Depends(get_db)):
     db.add(FoodLog(user_id=data['user_id'], meal_type=data['meal_type'], food_name=data['name'], 
-                   calories=int(data['kcal']), protein=float(data['p']), fat=float(data['f']), 
-                   carbs=float(data['c']), sugar=float(data['sugar']), salt=float(data['salt']),
-                   created_at=datetime.strptime(data['date'], '%Y-%m-%d'))); 
+                   calories=data['kcal'], protein=data['p'], fat=data['f'], carbs=data['c'], 
+                   sugar=data['sugar'], salt=data['salt'], created_at=datetime.strptime(data['date'], '%Y-%m-%d')))
     db.commit(); return {"ok": True}
 
 @app.post("/add_water")
 async def add_water(user_id: str, date: str, amount: float, db: Session = Depends(get_db)):
-    db.add(WaterLog(user_id=str(user_id), amount=amount, created_at=datetime.strptime(date, '%Y-%m-%d'))); 
+    db.add(WaterLog(user_id=str(user_id), amount=amount, created_at=datetime.strptime(date, '%Y-%m-%d')))
     db.commit(); return {"ok": True}
+
+@app.post("/chat")
+async def chat(msg: str = Form(...)):
+    res = model.generate_content(f"Ти дієтолог FitLio. Дай пораду українською: {msg}")
+    return {"reply": res.text}
