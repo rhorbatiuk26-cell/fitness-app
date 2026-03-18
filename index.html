@@ -6,24 +6,25 @@
     <title>FitLio Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --accent: #10b981; --blue: #3b82f6; --pink: #ec4899; }
+        :root { --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --accent: #10b981; --blue: #3b82f6; --pink: #ec4899; --indigo: #6366f1; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         .neu-card { background: var(--card); border-radius: 28px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); margin-bottom: 15px; }
-        .macro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
-        .ring-box { position: relative; width: 80px; height: 80px; margin: 0 auto; }
-        .ring-box svg { transform: rotate(-90deg); width: 80px; height: 80px; }
-        circle { fill: none; stroke-width: 7; stroke-linecap: round; }
-        .ring-fg { stroke-dasharray: 220; stroke-dashoffset: 220; transition: 0.6s ease; }
-        .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; }
         
+        /* 6 кілець: 3 в ряд */
+        .macro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .ring-box { position: relative; width: 85px; height: 85px; margin: 0 auto; }
+        .ring-box svg { transform: rotate(-90deg); width: 85px; height: 85px; }
+        circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+        .ring-fg { stroke-dasharray: 226; stroke-dashoffset: 226; transition: 0.6s ease; }
+        .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .ring-label b { font-size: 14px; line-height: 1; }
+        .ring-label small { font-size: 9px; color: #64748b; margin-top: 2px; }
+
         .water-card { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 20px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border: 1px solid #bae6fd; }
         .meal-card { background: #fff; border-radius: 20px; padding: 15px; margin-bottom: 10px; border: 1px solid #f1f5f9; }
-        .meal-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .meal-det { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee; }
-        
-        .btn { border: none; border-radius: 15px; padding: 12px; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn { border: none; border-radius: 12px; padding: 10px; font-weight: bold; cursor: pointer; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .modal-content { width: 90%; background: #fff; padding: 25px; border-radius: 30px; max-height: 85vh; overflow-y: auto; }
+        .modal-content { width: 90%; background: #fff; padding: 25px; border-radius: 30px; max-height: 80vh; overflow-y: auto; }
         input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #eee; margin-top: 5px; box-sizing: border-box; }
     </style>
 </head>
@@ -31,80 +32,87 @@
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
         <h2 style="margin:0;">Мій Прогрес</h2>
-        <button class="btn" style="width:50px; background:none; font-size:24px;" onclick="openModal('profileModal')">⚙️</button>
+        <button class="btn" style="background:none; font-size:22px;" onclick="openModal('profileModal')">⚙️</button>
     </div>
 
     <div class="neu-card">
-        <div style="text-align:center; position:relative; margin-bottom:15px;">
+        <div style="text-align:center; position:relative;">
             <svg width="140" height="140" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
-                <circle stroke="#f1f5f9" stroke-width="12" cx="80" cy="80" r="70"></circle>
-                <circle id="m_ring" stroke="var(--accent)" stroke-width="12" stroke-dasharray="440" stroke-dashoffset="440" cx="80" cy="80" r="70"></circle>
+                <circle stroke="#f1f5f9" stroke-width="10" cx="80" cy="80" r="72"></circle>
+                <circle id="m_ring" stroke="var(--accent)" stroke-width="10" stroke-dasharray="452" stroke-dashoffset="452" cx="80" cy="80" r="72"></circle>
             </svg>
-            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
-                <h1 id="k_left" style="margin:0;">0</h1><small>залишилось</small>
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
+                <h1 id="k_left" style="margin:0; font-size:32px;">0</h1><small id="k_norm">з 2000</small>
             </div>
         </div>
+
         <div class="macro-grid">
-            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_p" class="ring-fg" stroke="var(--accent)" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_p">0</b><small>Б</small></div></div>
-            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_f" class="ring-fg" stroke="#f59e0b" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_f">0</b><small>Ж</small></div></div>
-            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_c" class="ring-fg" stroke="var(--blue)" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_c">0</b><small>В</small></div></div>
-            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_sugar" class="ring-fg" stroke="var(--pink)" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_sugar">0</b><small>Цук</small></div></div>
-            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_salt" class="ring-fg" stroke="#6366f1" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_salt">0</b><small>Сіль</small></div></div>
-            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="35"></circle><circle id="r_water" class="ring-fg" stroke="#0ea5e9" cx="40" cy="40" r="35"></circle></svg><div class="ring-label"><b id="v_water">0</b><small>Вода</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_p" class="ring-fg" stroke="var(--accent)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_p">0</b><small id="n_p">/120</small><small>БІЛОК</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_f" class="ring-fg" stroke="#f59e0b" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_f">0</b><small id="n_f">/70</small><small>ЖИРИ</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_c" class="ring-fg" stroke="var(--blue)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_c">0</b><small id="n_c">/250</small><small>ВУГЛ</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_sugar" class="ring-fg" stroke="var(--pink)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_sugar">0</b><small id="n_sugar">/50</small><small>ЦУКОР</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_salt" class="ring-fg" stroke="var(--indigo)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_salt">0</b><small id="n_salt">/5</small><small>СІЛЬ</small></div></div>
+            <div class="ring-box"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_water" class="ring-fg" stroke="#0ea5e9" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_water">0</b><small id="n_water">/2.5</small><small>ВОДА</small></div></div>
         </div>
     </div>
 
     <div class="water-card">
-        <div><b>💧 Гідратація</b><br><small id="w_info">Випито: 0 / 2.5 л</small></div>
-        <button class="btn" style="width:auto; background:var(--blue); color:#fff; padding:10px 18px;" onclick="addWater()">+0.25л</button>
+        <div><b>💧 Гідратація</b><br><small id="w_txt">Випито: 0 / 2.5 л</small></div>
+        <button class="btn" style="background:var(--blue); color:#fff; width:80px;" onclick="addWater()">+0.25л</button>
     </div>
 
     <div id="meals_list">
-        <div class="meal-card" onclick="toggleMeal('Breakfast')">
-            <div class="meal-header"><b>🍳 Сніданок</b><div><span id="k_Breakfast">0</span> ккал <button class="btn" style="width:35px; padding:5px; margin-left:10px;" onclick="event.stopPropagation(); openAdd('Breakfast')">+</button></div></div>
+        <div class="meal-card">
+            <div style="display:flex; justify-content:space-between;" onclick="toggleMeal('Breakfast')">
+                <b>🍳 Сніданок</b> <span><span id="k_Breakfast">0</span> ккал <button class="btn" style="padding:2px 8px; margin-left:5px;" onclick="event.stopPropagation(); openAdd('Breakfast')">+</button></span>
+            </div>
             <div id="det_Breakfast" class="meal-det"></div>
         </div>
-        <div class="meal-card" onclick="toggleMeal('Lunch')">
-            <div class="meal-header"><b>🍲 Обід</b><div><span id="k_Lunch">0</span> ккал <button class="btn" style="width:35px; padding:5px; margin-left:10px;" onclick="event.stopPropagation(); openAdd('Lunch')">+</button></div></div>
+        <div class="meal-card">
+            <div style="display:flex; justify-content:space-between;" onclick="toggleMeal('Lunch')">
+                <b>🍲 Обід</b> <span><span id="k_Lunch">0</span> ккал <button class="btn" style="padding:2px 8px; margin-left:5px;" onclick="event.stopPropagation(); openAdd('Lunch')">+</button></span>
+            </div>
             <div id="det_Lunch" class="meal-det"></div>
         </div>
-        <div class="meal-card" onclick="toggleMeal('Dinner')">
-            <div class="meal-header"><b>🥗 Вечеря</b><div><span id="k_Dinner">0</span> ккал <button class="btn" style="width:35px; padding:5px; margin-left:10px;" onclick="event.stopPropagation(); openAdd('Dinner')">+</button></div></div>
+        <div class="meal-card">
+            <div style="display:flex; justify-content:space-between;" onclick="toggleMeal('Dinner')">
+                <b>🥗 Вечеря</b> <span><span id="k_Dinner">0</span> ккал <button class="btn" style="padding:2px 8px; margin-left:5px;" onclick="event.stopPropagation(); openAdd('Dinner')">+</button></span>
+            </div>
             <div id="det_Dinner" class="meal-det"></div>
         </div>
     </div>
 
     <div id="inputModal" class="modal"><div class="modal-content">
         <h3>Додати їжу</h3>
-        <button class="btn" style="background:var(--accent); color:#fff; margin-bottom:12px;" onclick="document.getElementById('fIn').click()">📸 Фото їжі</button>
+        <button class="btn" style="background:var(--accent); color:#fff; width:100%; margin-bottom:10px;" onclick="document.getElementById('fIn').click()">📸 Зробити фото</button>
         <textarea id="tFood" style="width:100%; height:80px; padding:10px; border-radius:10px;" placeholder="Або введіть текст..."></textarea>
-        <button class="btn" style="background:var(--blue); color:#fff; margin-top:10px;" onclick="doAnalyze()">Аналізувати ШІ</button>
-        <button class="btn" style="margin-top:10px;" onclick="closeModal('inputModal')">Назад</button>
+        <button class="btn" style="background:var(--blue); color:#fff; width:100%; margin-top:10px;" onclick="doAnalyze()">Аналізувати</button>
+        <button class="btn" style="width:100%; margin-top:10px;" onclick="closeModal('inputModal')">Закрити</button>
     </div></div>
 
     <div id="confirmModal" class="modal"><div class="modal-content">
-        <h3>Перевірка ШІ</h3>
-        <input id="en">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <input id="ek" type="number" placeholder="Ккал"> <input id="ep" type="number" placeholder="Б">
-            <input id="ef" type="number" placeholder="Ж"> <input id="ec" type="number" placeholder="В">
+        <h3>Результат ШІ</h3>
+        <input id="en" placeholder="Назва">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+            <input id="ek" type="number" placeholder="Ккал"> <input id="ep" type="number" placeholder="Білки">
+            <input id="ef" type="number" placeholder="Жири"> <input id="ec" type="number" placeholder="Вугл">
             <input id="esu" type="number" placeholder="Цукор"> <input id="esa" type="number" placeholder="Сіль">
         </div>
-        <button class="btn" style="background:var(--accent); color:#fff; margin-top:15px;" onclick="finalSave()">Зберегти в щоденник</button>
+        <button class="btn" style="background:var(--accent); color:#fff; width:100%; margin-top:20px;" onclick="finalSave()">Зберегти</button>
     </div></div>
 
     <div id="profileModal" class="modal"><div class="modal-content">
-        <h3>Мій Профіль</h3>
+        <h3>Налаштування норм</h3>
         <input id="weight" type="number" placeholder="Вага (кг)">
         <input id="height" type="number" placeholder="Зріст (см)">
         <select id="goal"><option value="lose">Схуднення</option><option value="maintain">Підтримка</option><option value="gain">Набір</option></select>
-        <hr style="margin:20px 0; opacity:0.1;">
-        <small style="color:var(--blue); font-weight:bold;">Ручне налаштування норм:</small>
+        <hr style="margin:15px 0; opacity:0.1;">
+        <small>Власні цілі (ккал, Б, Ж, В):</small>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <input id="c_kcal" type="number" placeholder="Ккал"> <input id="c_p" type="number" placeholder="Б (г)">
-            <input id="c_f" type="number" placeholder="Ж (г)"> <input id="c_c" type="number" placeholder="В (г)">
+            <input id="c_kcal" type="number" placeholder="Ккал"> <input id="c_p" type="number" placeholder="Б">
+            <input id="c_f" type="number" placeholder="Ж"> <input id="c_c" type="number" placeholder="В">
         </div>
-        <button class="btn" style="background:var(--blue); color:#fff; margin-top:20px;" onclick="saveProfile()">Зберегти дані</button>
+        <button class="btn" style="background:var(--blue); color:#fff; width:100%; margin-top:20px;" onclick="saveProfile()">Зберегти</button>
     </div></div>
 
     <input type="file" id="fIn" style="display:none" onchange="doAnalyze()">
@@ -118,30 +126,39 @@
         async function load() {
             const r = await fetch(`${API}/stats?user_id=${uid}&date=${selectedDate}`);
             const d = await r.json();
-            if(!d.has_profile) openModal('profileModal');
-
-            document.getElementById('k_left').innerText = Math.max(0, d.norms.kcal - d.kcal);
-            document.getElementById('m_ring').style.strokeDashoffset = 440 - (440 * Math.min(1, d.kcal/d.norms.kcal));
-
-            const upR = (id, vId, v, n) => {
-                document.getElementById(id).style.strokeDashoffset = 220 - (220 * Math.min(1, v/n));
-                document.getElementById(vId).innerText = Math.round(v || 0);
-            };
-            upR('r_p','v_p', d.p, d.norms.p); upR('r_f','v_f', d.f, d.norms.f); upR('r_c','v_c', d.c, d.norms.c);
-            upR('r_sugar','v_sugar', d.sugar, 50); upR('r_salt','v_salt', d.salt, 5); upR('r_water','v_water', d.water, 2.5);
             
-            document.getElementById('w_info').innerText = `Випито: ${d.water} / 2.5 л`;
+            document.getElementById('k_left').innerText = Math.max(0, d.norms.kcal - d.kcal);
+            document.getElementById('k_norm').innerText = `з ${d.norms.kcal}`;
+            document.getElementById('m_ring').style.strokeDashoffset = 452 - (452 * Math.min(1, d.kcal/d.norms.kcal));
+
+            const upR = (id, vId, nId, v, n) => {
+                document.getElementById(id).style.strokeDashoffset = 226 - (226 * Math.min(1, v/n));
+                document.getElementById(vId).innerText = Math.round(v);
+                document.getElementById(nId).innerText = `/${n}`;
+                document.getElementById(vId).style.color = v > n ? 'red' : 'inherit';
+            };
+
+            upR('r_p','v_p','n_p', d.p, d.norms.p); 
+            upR('r_f','v_f','n_f', d.f, d.norms.f); 
+            upR('r_c','v_c','n_c', d.c, d.norms.c);
+            upR('r_sugar','v_sugar','n_sugar', d.sugar, d.norms.sugar); 
+            upR('r_salt','v_salt','n_salt', d.salt, d.norms.salt); 
+            upR('r_water','v_water','n_water', d.water, 2.5);
+
+            document.getElementById('w_txt').innerText = `Випито: ${d.water} / 2.5 л`;
 
             for (let mt in d.meals) {
                 const m = d.meals[mt];
                 document.getElementById('k_'+mt).innerText = m.kcal;
                 const det = document.getElementById('det_'+mt);
-                det.innerHTML = `<div style="font-size:11px; color:#64748b; margin-bottom:5px;">Б:${m.p || 0} Ж:${m.f || 0} В:${m.c || 0} | Цук:${m.sugar || 0} Сіль:${m.salt || 0}</div>` + 
-                    m.list.map(i => `<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:3px;"><span>${i.name}</span><b>${i.kcal}</b></div>`).join('');
+                det.innerHTML = `<div style="font-size:10px; color:gray; margin-bottom:5px;">Б:${m.p} Ж:${m.f} В:${m.c} | Ц:${m.sugar} С:${m.salt}</div>` + 
+                    m.list.map(i => `<div style="display:flex;justify-content:space-between;font-size:13px;"><span>${i.name}</span><b>${i.kcal}</b></div>`).join('');
             }
         }
 
-        function openAdd(mt) { activeMeal=mt; document.getElementById('tFood').value=""; document.getElementById('fIn').value=""; openModal('inputModal'); }
+        async function addWater() { await fetch(`${API}/add_water?user_id=${uid}&date=${selectedDate}&amount=0.25`, {method:'POST'}); load(); }
+        
+        function openAdd(mt) { activeMeal=mt; openModal('inputModal'); }
         async function doAnalyze() {
             tg.MainButton.setText("ШІ аналізує...").show();
             const fd = new FormData();
@@ -162,9 +179,8 @@
             closeModal('confirmModal'); load();
         }
 
-        async function addWater() { await fetch(`${API}/add_water?user_id=${uid}&date=${selectedDate}&amount=0.25`, {method:'POST'}); load(); }
         async function saveProfile() {
-            const data = { user_id:uid, gender:'male', weight:document.getElementById('weight').value, height:document.getElementById('height').value, age:25, goal:document.getElementById('goal').value, c_kcal:document.getElementById('c_kcal').value, c_p:document.getElementById('c_p').value, c_f:document.getElementById('c_f').value, c_c:document.getElementById('c_c').value };
+            const data = { user_id:uid, weight:document.getElementById('weight').value, height:document.getElementById('height').value, goal:document.getElementById('goal').value, c_kcal:document.getElementById('c_kcal').value, c_p:document.getElementById('c_p').value, c_f:document.getElementById('c_f').value, c_c:document.getElementById('c_c').value };
             await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             closeModal('profileModal'); load();
         }
@@ -172,6 +188,7 @@
         function toggleMeal(mt) { const d=document.getElementById('det_'+mt); d.style.display=d.style.display==='block'?'none':'block'; }
         function openModal(id) { document.getElementById(id).style.display='flex'; }
         function closeModal(id) { document.getElementById(id).style.display='none'; }
+        
         load(); tg.expand();
     </script>
 </body>
