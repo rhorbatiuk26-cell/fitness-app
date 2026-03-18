@@ -24,7 +24,6 @@
         .modal-content { width: 90%; background: #fff; padding: 25px; border-radius: 30px; max-height: 85vh; overflow-y: auto; }
         input, select, textarea { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 8px; box-sizing: border-box; font-size: 16px; }
         .det-box { font-size: 11px; color: #64748b; background: #f8fafc; padding: 10px; border-radius: 12px; margin: 10px 0; line-height: 1.4; }
-        .error-input { border: 2px solid var(--pink) !important; }
     </style>
 </head>
 <body>
@@ -41,7 +40,7 @@
                 <circle id="m_ring" stroke="var(--accent)" stroke-width="12" stroke-dasharray="452" stroke-dashoffset="452" cx="80" cy="80" r="72"></circle>
             </svg>
             <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
-                <h1 id="k_left" style="margin:0; font-size:32px;">0</h1><small id="k_n" style="color:#64748b;">з --</small>
+                <h1 id="k_left" style="margin:0; font-size:32px;">0</h1><small id="k_n" style="color:#64748b;">ккал залишилось</small>
             </div>
         </div>
         <div class="macro-grid">
@@ -55,7 +54,7 @@
     </div>
 
     <div class="neu-card" style="display:flex; justify-content:space-between; align-items:center; padding:15px;">
-        <div><b>💧 Гідратація</b><br><small id="w_txt" style="color:#64748b;">0 / 2.5 л</small></div>
+        <div><b>💧 Вода</b><br><small id="w_txt" style="color:#64748b;">0 / 2.5 л</small></div>
         <button class="btn" style="background:var(--blue); color:#fff; padding:10px 20px;" onclick="addWater()">+0.25л</button>
     </div>
 
@@ -84,60 +83,46 @@
     </div>
 
     <div id="profileModal" class="modal"><div class="modal-content">
-        <h2 id="setupTitle">Вкажіть ваші дані</h2>
-        <p id="setupSub" style="font-size:14px; color:gray;">Це потрібно для розрахунку денної норми.</p>
-        
-        <div style="margin-top:10px;">
-            <small>Вага (кг):</small>
-            <input id="p_w" type="number" placeholder="Наприклад: 80">
-        </div>
-        <div style="margin-top:10px;">
-            <small>Зріст (см):</small>
-            <input id="p_h" type="number" placeholder="Наприклад: 180">
-        </div>
-        <div style="margin-top:10px;">
-            <small>Ціль:</small>
-            <select id="p_g">
-                <option value="lose">Схуднення</option>
-                <option value="maintain">Підтримка ваги</option>
-                <option value="gain">Набір маси</option>
-            </select>
-        </div>
-
-        <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
-            <small style="color:var(--blue); font-weight:bold;">Або встановіть норми вручну:</small>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:5px;">
+        <h3 id="setupTitle">Ваші налаштування</h3>
+        <input id="p_w" type="number" placeholder="Вага (кг)">
+        <input id="p_h" type="number" placeholder="Зріст (см)">
+        <select id="p_g">
+            <option value="lose">Схуднення</option>
+            <option value="maintain">Підтримка</option>
+            <option value="gain">Набір</option>
+        </select>
+        <div style="margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                 <div><small>Ккал</small><input id="p_kcal" type="number" value="2000"></div>
-                <div><small>Білки (г)</small><input id="p_p" type="number" value="120"></div>
-                <div><small>Жири (г)</small><input id="p_f" type="number" value="70"></div>
-                <div><small>Вугл (г)</small><input id="p_c" type="number" value="250"></div>
+                <div><small>Білки</small><input id="p_p" type="number" value="120"></div>
+                <div><small>Жири</small><input id="p_f" type="number" value="70"></div>
+                <div><small>Вугл</small><input id="p_c" type="number" value="250"></div>
             </div>
         </div>
-
-        <button id="saveBtn" class="btn" style="background:var(--accent); color:#fff; width:100%; margin-top:25px; font-size:18px;" onclick="saveProfile()">ЗБЕРЕГТИ ТА ПОЧАТИ</button>
-        <button id="closeBtn" class="btn" style="width:100%; margin-top:10px; background:#f1f5f9; display:none;" onclick="closeModal('profileModal')">Закрити</button>
+        <button class="btn" style="background:var(--accent); color:#fff; width:100%; margin-top:20px;" onclick="saveProfile()">Зберегти</button>
+        <button id="closeBtn" class="btn" style="width:100%; margin-top:10px; background:#f1f5f9;" onclick="closeModal('profileModal')">Закрити</button>
     </div></div>
 
     <div id="inputModal" class="modal"><div class="modal-content">
         <h3>Додати їжу</h3>
         <button class="btn" style="background:var(--accent); color:#fff; width:100%; margin-bottom:15px;" onclick="document.getElementById('fIn').click()">📸 Зробити фото</button>
-        <textarea id="tFood" placeholder="Або введіть назву страви..."></textarea>
+        <textarea id="tFood" placeholder="Або введіть текст..."></textarea>
         <button class="btn" style="background:var(--blue); color:#fff; width:100%; margin-top:15px;" onclick="doAnalyze()">Аналізувати ШІ</button>
         <button class="btn" style="width:100%; margin-top:10px; background:#f1f5f9;" onclick="closeModal('inputModal')">Закрити</button>
     </div></div>
 
     <div id="confirmModal" class="modal"><div class="modal-content">
-        <h3>Підтвердження</h3>
-        <input id="en" placeholder="Назва страви">
+        <h3>Результат ШІ</h3>
+        <input id="en" placeholder="Назва">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
             <div><small>Ккал</small><input id="ek" type="number"></div>
-            <div><small>Білки</small><input id="ep" type="number"></div>
-            <div><small>Жири</small><input id="ef" type="number"></div>
-            <div><small>Вугл</small><input id="ec" type="number"></div>
+            <div><small>Б</small><input id="ep" type="number"></div>
+            <div><small>Ж</small><input id="ef" type="number"></div>
+            <div><small>В</small><input id="ec" type="number"></div>
             <div><small>Цукор</small><input id="esu" type="number"></div>
             <div><small>Сіль</small><input id="esa" type="number"></div>
         </div>
-        <button class="btn" style="background:var(--accent); color:#fff; width:100%; margin-top:25px;" onclick="finalSave()">Зберегти в щоденник</button>
+        <button class="btn" style="background:var(--accent); color:#fff; width:100%; margin-top:20px;" onclick="finalSave()">Записати</button>
     </div></div>
 
     <input type="file" id="fIn" style="display:none" onchange="doAnalyze()">
@@ -153,17 +138,11 @@
                 const r = await fetch(`${API}/stats?user_id=${uid}&date=${selectedDate}`);
                 const d = await r.json();
 
-                // Якщо профілю немає в базі - примусово відкриваємо налаштування
                 if (!d.profile) {
                     openModal('profileModal');
-                    document.getElementById('closeBtn').style.display = 'none'; // Не даємо закрити
+                    document.getElementById('closeBtn').style.display = 'none';
                 } else {
                     document.getElementById('closeBtn').style.display = 'block';
-                    document.getElementById('setupTitle').innerText = "Налаштування";
-                    document.getElementById('setupSub').innerText = "Змініть ваші параметри при потребі.";
-                    document.getElementById('saveBtn').innerText = "Оновити дані";
-                    
-                    // Заповнюємо поля даними з бази
                     document.getElementById('p_w').value = d.profile.weight;
                     document.getElementById('p_h').value = d.profile.height;
                     document.getElementById('p_g').value = d.profile.goal;
@@ -173,68 +152,53 @@
                     document.getElementById('p_c').value = d.norms.c;
                 }
 
-                // Оновлення кілець
                 document.getElementById('k_left').innerText = Math.max(0, d.norms.kcal - d.kcal);
                 document.getElementById('k_n').innerText = `з ${d.norms.kcal}`;
                 document.getElementById('m_ring').style.strokeDashoffset = 452 - (452 * Math.min(1, d.kcal/d.norms.kcal));
 
                 const upR = (id, vId, nId, v, n) => {
-                    document.getElementById(id).style.strokeDashoffset = 226 - (226 * Math.min(1, v/n));
-                    document.getElementById(vId).innerText = Math.round(v);
-                    document.getElementById(nId).innerText = `/${n}`;
+                    document.getElementById(id).style.strokeDashoffset = 226 - (226 * Math.min(1, v/(n || 1)));
+                    document.getElementById(vId).innerText = Math.round(v || 0);
+                    document.getElementById(nId).innerText = `/${n || 0}`;
                 };
                 upR('r_p','v_p','n_p', d.p, d.norms.p); 
                 upR('r_f','v_f','n_f', d.f, d.norms.f); 
                 upR('r_c','v_c','n_c', d.c, d.norms.c);
-                upR('r_sugar','v_sugar','n_sugar', d.sugar, d.norms.sugar); 
-                upR('r_salt','v_salt','n_salt', d.salt, d.norms.salt); 
+                upR('r_sugar','v_sugar','n_sugar', d.sugar, 50); 
+                upR('r_salt','v_salt','n_salt', d.salt, 5); 
                 upR('r_water','v_water','n_water', d.water, 2.5);
 
-                document.getElementById('w_txt').innerText = `${d.water} / 2.5 л`;
+                document.getElementById('w_txt').innerText = `${d.water || 0} / 2.5 л`;
 
-                // Прийоми їжі
                 for (let mt in d.meals) {
                     const m = d.meals[mt];
                     if(document.getElementById('k_'+mt)) document.getElementById('k_'+mt).innerText = m.kcal;
                     const det = document.getElementById('det_'+mt);
                     if(det) {
-                        det.innerHTML = `<div class="det-box"><b>Разом:</b> Б:${m.p} | Ж:${m.f} | В:${m.c}<br><b>Цукор:</b> ${m.sugar}г | <b>Сіль:</b> ${m.salt}г</div>` + 
-                        m.list.map(i => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f8fafc;"><span>${i.name}</span><b>${i.kcal} ккал</b></div>`).join('');
+                        det.innerHTML = `<div class="det-box"><b>Б:${m.p} | Ж:${m.f} | В:${m.c}</b><br>Цукор: ${m.sugar}г | Сіль: ${m.salt}г</div>` + 
+                        m.list.map(i => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f8fafc;"><span>${i.name}</span><b>${i.kcal}</b></div>`).join('');
                     }
                 }
             } catch(e) { console.error(e); }
         }
 
         async function saveProfile() {
-            const w = document.getElementById('p_w').value;
-            if (!w) { document.getElementById('p_w').classList.add('error-input'); return; }
-            
             const data = { 
-                user_id: uid, 
-                weight: w, 
-                height: document.getElementById('p_h').value || 0, 
+                user_id: String(uid), 
+                weight: Number(document.getElementById('p_w').value || 0), 
+                height: Number(document.getElementById('p_h').value || 0), 
                 goal: document.getElementById('p_g').value, 
-                c_kcal: document.getElementById('p_kcal').value, 
-                c_p: document.getElementById('p_p').value, 
-                c_f: document.getElementById('p_f').value, 
-                c_c: document.getElementById('p_c').value 
+                c_kcal: Number(document.getElementById('p_kcal').value), 
+                c_p: Number(document.getElementById('p_p').value), 
+                c_f: Number(document.getElementById('p_f').value), 
+                c_c: Number(document.getElementById('p_c').value) 
             };
-            
-            const r = await fetch(`${API}/save_profile`, {
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(data)
-            });
-            
-            if (r.ok) {
-                closeModal('profileModal');
-                load(); // Одразу перераховуємо кільця
-            }
+            const r = await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            if(r.ok) { closeModal('profileModal'); load(); }
         }
 
-        // Функції аналізу та збереження їжі залишаються такими ж
         async function doAnalyze() {
-            tg.MainButton.setText("ШІ АНАЛІЗУЄ...").show();
+            tg.MainButton.setText("АНАЛІЗУЮ...").show();
             const fd = new FormData();
             if(document.getElementById('fIn').files[0]) fd.append('file', document.getElementById('fIn').files[0]);
             if(document.getElementById('tFood').value) fd.append('text_input', document.getElementById('tFood').value);
@@ -245,18 +209,27 @@
                 document.getElementById('ep').value=res.p; document.getElementById('ef').value=res.f; 
                 document.getElementById('ec').value=res.c; document.getElementById('esu').value=res.sugar; document.getElementById('esa').value=res.salt;
                 closeModal('inputModal'); openModal('confirmModal');
-            } catch(e) { alert("Помилка"); }
+            } catch(e) { alert("Помилка ШІ"); }
             tg.MainButton.hide();
         }
 
         async function finalSave() {
-            const data = { user_id:uid, date:selectedDate, meal_type:activeMeal, name:document.getElementById('en').value, kcal:document.getElementById('ek').value, p:document.getElementById('ep').value, f:document.getElementById('ef').value, c:document.getElementById('ec').value, sugar:document.getElementById('esu').value, salt:document.getElementById('esa').value };
+            const data = { 
+                user_id:uid, date:selectedDate, meal_type:activeMeal, 
+                name:document.getElementById('en').value, 
+                kcal:Number(document.getElementById('ek').value), 
+                p:Number(document.getElementById('ep').value), 
+                f:Number(document.getElementById('ef').value), 
+                c:Number(document.getElementById('ec').value), 
+                sugar:Number(document.getElementById('esu').value), 
+                salt:Number(document.getElementById('esa').value) 
+            };
             await fetch(`${API}/confirm_save`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             closeModal('confirmModal'); load();
         }
 
         async function addWater() { await fetch(`${API}/add_water?user_id=${uid}&date=${selectedDate}&amount=0.25`, {method:'POST'}); load(); }
-        function toggleMeal(mt) { const d=document.getElementById('det_'+mt); d.style.display=d.style.display==='none'?'block':'none'; }
+        function toggleMeal(mt) { const d=document.getElementById('det_'+mt); if(d) d.style.display=d.style.display==='none'?'block':'none'; }
         function openModal(id) { document.getElementById(id).style.display='flex'; }
         function closeModal(id) { document.getElementById(id).style.display='none'; }
         function openAdd(mt) { activeMeal=mt; openModal('inputModal'); }
