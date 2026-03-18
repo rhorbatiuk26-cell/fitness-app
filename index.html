@@ -6,174 +6,165 @@
     <title>FitLio Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --bg: #f8fafc; --accent: #10b981; --indigo: #6366f1; --blue: #3b82f6; --rose: #f43f5e; --amber: #f59e0b; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #1e293b; padding-bottom: 100px; }
+        :root { --bg: #f8fafc; --accent: #10b981; --indigo: #6366f1; --rose: #f43f5e; --amber: #f59e0b; --blue: #3b82f6; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; padding-bottom: 100px; color: #1e293b; }
         
-        /* Onboarding */
-        #onboarding { position: fixed; inset: 0; background: white; z-index: 9000; padding: 25px; display: none; flex-direction: column; text-align: center; }
-        
-        .calendar-nav { display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px; border-radius: 18px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .calendar-nav input { border: none; font-weight: bold; color: var(--indigo); font-size: 16px; width: 130px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .header b { color: var(--indigo); font-size: 18px; }
 
-        .neu-card { background: white; border-radius: 25px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); text-align: center; margin-bottom: 15px; }
-        .main-ring-box { position: relative; display: inline-block; margin-bottom: 15px; }
-        
-        .macro-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-        .ring-box { position: relative; cursor: pointer; text-align: center; }
-        .ring-box svg { transform: rotate(-90deg); width: 100%; height: auto; max-width: 65px; }
-        .ring-box circle { fill: none; stroke-width: 6; stroke-linecap: round; transition: 0.5s; }
-        .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; pointer-events: none; }
+        .stats-card { background: white; border-radius: 30px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); text-align: center; margin-bottom: 15px; }
+        .ring-container { position: relative; display: inline-block; margin-bottom: 15px; }
+        .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
-        .meal-card { background: white; border-radius: 18px; padding: 15px; margin-bottom: 10px; border: 1px solid #f1f5f9; }
-        .meal-header { display: flex; justify-content: space-between; align-items: center; font-weight: 800; }
-        .food-item { border-top: 1px solid #f1f5f9; padding: 8px 0; margin-top: 8px; }
-        .food-stats { font-size: 10px; color: #64748b; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin-top: 3px; }
+        .macro-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .mini-ring { position: relative; text-align: center; }
+        .mini-ring svg { transform: rotate(-90deg); width: 100%; }
+        circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+        .mini-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
 
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 10000; }
-        .modal-content { width: 85%; background: white; padding: 20px; border-radius: 25px; }
-        .btn-plus { background: #f0fdf4; color: var(--accent); border: none; width: 32px; height: 32px; border-radius: 10px; font-size: 20px; font-weight: bold; }
-        .btn-main { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 14px; width: 100%; font-weight: bold; margin-top: 10px; }
+        .water-card { background: #eff6ff; border-radius: 20px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid #dbeafe; font-weight: bold; }
+        .meal-card { background: white; border-radius: 20px; padding: 15px; margin-bottom: 10px; border: 1px solid #f1f5f9; }
+        .meal-info { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .food-list { display: none; margin-top: 10px; font-size: 13px; color: #64748b; border-top: 1px solid #eee; padding-top: 10px; }
         
-        input[type="number"], input[type="text"], textarea { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 10px; box-sizing: border-box; }
+        .btn-plus { background: #f0fdf4; color: var(--accent); border: none; width: 34px; height: 34px; border-radius: 10px; font-size: 20px; cursor: pointer; }
+        .btn-water { background: var(--blue); color: white; border: none; padding: 8px 15px; border-radius: 12px; }
+
+        .chat-fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: var(--indigo); border-radius: 30px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; box-shadow: 0 8px 25px rgba(99,102,241,0.4); z-index: 1000; }
+        #chat-win { position: fixed; bottom: 90px; right: 15px; left: 15px; height: 420px; background: white; border-radius: 25px; display: none; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 2000; overflow: hidden; border: 1px solid #eee; }
+
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 3000; }
+        .modal-content { background: white; width: 85%; padding: 25px; border-radius: 30px; }
+        #onboarding { position: fixed; inset: 0; background: white; z-index: 9999; display: none; flex-direction: column; padding: 30px; gap: 15px; }
     </style>
 </head>
 <body>
 
     <div id="onboarding">
-        <h2 style="color:var(--indigo)">Привіт! 🚀</h2>
-        <p>Введіть дані для розрахунку БЖВ, Цукру та Солі</p>
+        <h2>Вітаємо у FitLio! 🍏</h2>
         <input id="reg_w" type="number" placeholder="Вага (кг)">
         <input id="reg_h" type="number" placeholder="Зріст (см)">
         <input id="reg_a" type="number" placeholder="Вік">
-        <button class="btn-main" onclick="startSetup()">Розрахувати ШІ</button>
+        <button onclick="startSetup()" style="background:var(--accent); color:white; padding:15px; border-radius:15px; border:none; font-weight:bold;">Порахувати норму</button>
     </div>
 
-    <div class="calendar-nav">
-        <b onclick="changeDay(-1)">◀</b>
-        <input type="date" id="datePicker" onchange="load()">
-        <b onclick="changeDay(1)">▶</b>
+    <div class="header">
+        <span onclick="changeDay(-1)" style="cursor:pointer">◀</span>
+        <b id="displayDate">Сьогодні</b>
+        <span onclick="changeDay(1)" style="cursor:pointer">▶</span>
     </div>
 
-    <div class="neu-card">
-        <div class="main-ring-box">
-            <svg width="140" height="140" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
-                <circle stroke="#f1f5f9" stroke-width="12" cx="80" cy="80" r="72"></circle>
-                <circle id="m_ring" stroke="var(--accent)" stroke-width="12" stroke-dasharray="452" cx="80" cy="80" r="72"></circle>
+    <div class="stats-card">
+        <div class="ring-container">
+            <svg width="150" height="150" viewBox="0 0 160 160">
+                <circle stroke="#f1f5f9" stroke-width="12" cx="80" cy="80" r="72"/>
+                <circle id="ring_kcal" stroke="var(--accent)" stroke-width="12" stroke-dasharray="452" cx="80" cy="80" r="72" style="transform:rotate(-90deg); transform-origin:center;"/>
             </svg>
-            <div class="ring-label" style="font-size:16px;"><span id="k_left" style="font-size:24px;">0</span><br><small>залишилось</small></div>
+            <div class="ring-label"><b id="txt_kcal_left" style="font-size:32px;">0</b><small>ккал залишилось</small></div>
         </div>
-
-        <div class="macro-grid">
-            <div class="ring-box" onclick="drilldown('p')"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_p" stroke="var(--accent)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_p">0</b><small>Б</small></div></div>
-            <div class="ring-box" onclick="drilldown('f')"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_f" stroke="var(--amber)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_f">0</b><small>Ж</small></div></div>
-            <div class="ring-box" onclick="drilldown('c')"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_c" stroke="var(--blue)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_c">0</b><small>В</small></div></div>
-            <div class="ring-box" onclick="drilldown('sugar')"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_sugar" stroke="var(--rose)" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_sugar">0</b><small>Цук</small></div></div>
-            <div class="ring-box" onclick="drilldown('salt')"><svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"></circle><circle id="r_salt" stroke="#94a3b8" cx="40" cy="40" r="36"></circle></svg><div class="ring-label"><b id="v_salt">0</b><small>Сіль</small></div></div>
-        </div>
+        <div class="macro-grid" id="macro_circles"></div>
     </div>
 
-    <div id="meals_list">
-        <div class="meal-card" onclick="toggleM('Breakfast')"><div class="meal-header">🍳 Сніданок <span id="k_Breakfast">0</span> <button class="btn-plus" onclick="event.stopPropagation(); openAdd('Breakfast')">+</button></div><div id="det_Breakfast" style="display:none;"></div></div>
-        <div class="meal-card" onclick="toggleM('Snack1')"><div class="meal-header">🍎 Перекус 1 <span id="k_Snack1">0</span> <button class="btn-plus" onclick="event.stopPropagation(); openAdd('Snack1')">+</button></div><div id="det_Snack1" style="display:none;"></div></div>
-        <div class="meal-card" onclick="toggleM('Lunch')"><div class="meal-header">🍲 Обід <span id="k_Lunch">0</span> <button class="btn-plus" onclick="event.stopPropagation(); openAdd('Lunch')">+</button></div><div id="det_Lunch" style="display:none;"></div></div>
-        <div class="meal-card" onclick="toggleM('Snack2')"><div class="meal-header">🍌 Перекус 2 <span id="k_Snack2">0</span> <button class="btn-plus" onclick="event.stopPropagation(); openAdd('Snack2')">+</button></div><div id="det_Snack2" style="display:none;"></div></div>
-        <div class="meal-card" onclick="toggleM('Dinner')"><div class="meal-header">🥗 Вечеря <span id="k_Dinner">0</span> <button class="btn-plus" onclick="event.stopPropagation(); openAdd('Dinner')">+</button></div><div id="det_Dinner" style="display:none;"></div></div>
+    <div class="water-card">
+        <span>💧 Вода: <span id="txt_water">0</span> / 2.0 л</span>
+        <button class="btn-water" onclick="addWater()">+0.25л</button>
     </div>
 
-    <div id="drillModal" class="modal"><div class="modal-content"><h3 id="drillTitle">Деталі</h3><div id="drillItems" style="max-height:300px; overflow-y:auto;"></div><button class="btn-main" onclick="closeModal('drillModal')">Закрити</button></div></div>
-    <div id="addModal" class="modal"><div class="modal-content"><h3>Додати їжу</h3><button class="btn-main" onclick="document.getElementById('fIn').click()">📸 Фото</button><textarea id="tIn" placeholder="Або напишіть..."></textarea><button class="btn-main" style="background:var(--indigo)" onclick="doAnalyze()">Аналіз ШІ</button><button class="btn-main" style="background:#ccc" onclick="closeModal('addModal')">Скасувати</button></div></div>
-    <div id="confirmModal" class="modal"><div class="modal-content"><h3>Підтвердити?</h3><input id="resN"><input id="resK" type="number"><button class="btn-main" onclick="finalSave()">Записати в базу</button></div></div>
+    <div id="meal_list"></div>
+
+    <div class="chat-fab" onclick="toggleChat()">💬</div>
+    <div id="chat-win">
+        <div style="background:var(--indigo); color:white; padding:15px; display:flex; justify-content:space-between;"><b>ШІ-Дієтолог</b> <span onclick="toggleChat()">✕</span></div>
+        <div id="chat-msgs" style="flex:1; overflow-y:auto; padding:15px; font-size:14px; display:flex; flex-direction:column; gap:10px;"></div>
+        <div style="padding:10px; display:flex; gap:5px; border-top:1px solid #eee;"><input id="chatIn" style="flex:1; border-radius:15px; border:1px solid #ddd; padding:8px;"><button onclick="sendChat()" style="background:var(--indigo); border:none; color:white; border-radius:50%; width:35px;">🚀</button></div>
+    </div>
+
+    <div id="addModal" class="modal"><div class="modal-content"><h3>Додати страву</h3><button onclick="document.getElementById('fIn').click()" style="width:100%; padding:15px; border-radius:15px; border:none; background:#f1f5f9; margin-bottom:10px;">📸 Фото їжі</button><textarea id="tIn" placeholder="Або напиши назву..." style="width:100%; height:60px; border-radius:10px; padding:10px; border:1px solid #ddd;"></textarea><button onclick="doAnalyze()" style="width:100%; background:var(--accent); color:white; padding:15px; border-radius:15px; border:none; font-weight:bold; margin-top:10px;">Проаналізувати</button></div></div>
+    <div id="confirmModal" class="modal"><div class="modal-content"><h3>Підтвердження</h3><input id="resN" style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd;"><input id="resK" type="number" style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd; margin-top:10px;"><button onclick="finalSave()" style="width:100%; background:var(--accent); color:white; padding:15px; border-radius:15px; border:none; font-weight:bold; margin-top:15px;">Зберегти в щоденник</button></div></div>
 
     <input type="file" id="fIn" style="display:none" onchange="doAnalyze()">
 
     <script>
         const tg = window.Telegram.WebApp; const uid = tg.initDataUnsafe.user?.id || "test_user";
         const API = "https://fitness-app-production-b4a3.up.railway.app";
-        let activeM = "", lastRes = {}, currentData = {};
-
-        document.getElementById('datePicker').value = new Date().toISOString().split('T')[0];
+        let selDate = new Date().toISOString().split('T')[0], activeM = "", lastAi = {};
 
         async function load() {
-            const r = await fetch(`${API}/stats?user_id=${uid}&date=${document.getElementById('datePicker').value}`);
+            document.getElementById('displayDate').innerText = selDate === new Date().toISOString().split('T')[0] ? "Сьогодні" : selDate;
+            const r = await fetch(`${API}/stats?user_id=${uid}&date=${selDate}`);
             const d = await r.json();
             if(!d.norms) { document.getElementById('onboarding').style.display='flex'; return; }
-            currentData = d; document.getElementById('onboarding').style.display='none';
-            
-            updateRing('m_ring', d.totals.kcal, d.norms.kcal, 452);
-            document.getElementById('k_left').innerText = Math.max(0, d.norms.kcal - d.totals.kcal);
-            
-            ['p','f','c','sugar','salt'].forEach(m => {
-                updateRing('r_'+m, d.totals[m], d.norms[m], 226);
-                document.getElementById('v_'+m).innerText = Math.round(d.totals[m]);
-            });
+            document.getElementById('onboarding').style.display='none';
 
-            ["Breakfast","Snack1","Lunch","Snack2","Dinner"].forEach(m => {
-                document.getElementById('k_'+m).innerText = d.meals[m].kcal;
-                document.getElementById('det_'+m).innerHTML = d.meals[m].list.map(i => `
-                    <div class="food-item">
-                        <b>${i.name}</b> (${i.kcal} ккал)
-                        <div class="food-stats">
-                            <span>Б:${Math.round(i.p)}</span><span>Ж:${Math.round(i.f)}</span><span>В:${Math.round(i.c)}</span>
-                            <span style="color:var(--rose)">Ц:${Math.round(i.sugar)}</span><span style="color:#94a3b8">С:${i.salt}</span>
-                        </div>
-                    </div>
-                `).join('');
-            });
-        }
+            // Головне кільце
+            document.getElementById('ring_kcal').style.strokeDashoffset = 452 - (452 * Math.min(1, d.totals.kcal / d.norms.kcal));
+            document.getElementById('txt_kcal_left').innerText = Math.max(0, d.norms.kcal - d.totals.kcal);
+            document.getElementById('txt_water').innerText = d.water;
 
-        function updateRing(id, val, norm, maxDash) {
-            const offset = maxDash - (maxDash * Math.min(1, val/norm));
-            const el = document.getElementById(id);
-            el.style.strokeDasharray = maxDash;
-            el.style.strokeDashoffset = offset;
-        }
+            // 5 малих кілець
+            const mks = [
+                {n:'Біл', c:'var(--accent)', v:d.totals.p, m:d.norms.p},
+                {n:'Жир', c:'var(--amber)', v:d.totals.f, m:d.norms.f},
+                {n:'Вуг', c:'var(--blue)', v:d.totals.c, m:d.norms.c},
+                {n:'Цук', c:'var(--rose)', v:d.totals.sugar, m:d.norms.sugar},
+                {n:'Сіль', c:'#94a3b8', v:d.totals.salt, m:d.norms.salt}
+            ];
+            document.getElementById('macro_circles').innerHTML = mks.map(m => `
+                <div class="mini-ring">
+                    <svg viewBox="0 0 80 80"><circle stroke="#f1f5f9" cx="40" cy="40" r="36"/><circle stroke="${m.c}" stroke-dasharray="226" stroke-dashoffset="${226-(226*Math.min(1, m.v/m.m))}" cx="40" cy="40" r="36"/></svg>
+                    <div class="mini-text"><b>${Math.round(m.v)}</b><small>${m.n}</small></div>
+                </div>
+            `).join('');
 
-        function drilldown(type) {
-            const titles = {p:'Білки', f:'Жири', c:'Вуглеводи', sugar:'Цукор', salt:'Сіль'};
-            document.getElementById('drillTitle').innerText = titles[type];
-            let html = "";
-            Object.values(currentData.meals).forEach(m => {
-                m.list.forEach(i => {
-                    if(i[type] > 0) html += `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;"><span>${i.name}</span><b>${i[type]}г</b></div>`;
-                });
-            });
-            document.getElementById('drillItems').innerHTML = html || "Немає даних за цей день";
-            document.getElementById('drillModal').style.display='flex';
+            // Прийоми їжі
+            const meals = {Breakfast:"🍳 Сніданок", Snack1:"🍎 Перекус 1", Lunch:"🍲 Обід", Snack2:"🍌 Перекус 2", Dinner:"🥗 Вечеря"};
+            let mHtml = "";
+            for(let k in meals) {
+                mHtml += `<div class="meal-card" onclick="toggleM('${k}')">
+                    <div class="meal-info"><span>${meals[k]}</span> <span>${d.meals[k].kcal} ккал <button class="btn-plus" onclick="event.stopPropagation(); openAdd('${k}')">+</button></span></div>
+                    <div class="food-list" id="det_${k}">${d.meals[k].list.map(i => `<div>• ${i.food_name} (${i.calories} ккал)</div>`).join('')}</div>
+                </div>`;
+            }
+            document.getElementById('meal_list').innerHTML = mHtml;
         }
 
         async function startSetup() {
-            const r = await fetch(`${API}/calculate_norms`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({w:document.getElementById('reg_w').value, h:document.getElementById('reg_h').value})});
+            const data = {w:document.getElementById('reg_w').value, h:document.getElementById('reg_h').value, a:document.getElementById('reg_a').value};
+            const r = await fetch(`${API}/calculate_norms`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             const n = await r.json();
             await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:uid, ...n})});
             load();
         }
 
+        function openAdd(m) { activeM = m; document.getElementById('addModal').style.display='flex'; }
+        async function addWater() { await fetch(`${API}/add_water?user_id=${uid}&date=${selDate}&amount=0.25`, {method:'POST'}); load(); }
+        
         async function doAnalyze() {
             const fd = new FormData();
             if(document.getElementById('fIn').files[0]) fd.append('file', document.getElementById('fIn').files[0]);
             if(document.getElementById('tIn').value) fd.append('text_input', document.getElementById('tIn').value);
             const r = await fetch(`${API}/analyze`, {method:'POST', body:fd});
-            lastRes = await r.json();
-            document.getElementById('resN').value = lastRes.name;
-            document.getElementById('resK').value = lastRes.kcal;
+            lastAi = await r.json();
+            document.getElementById('resN').value = lastAi.name; document.getElementById('resK').value = lastAi.kcal;
             document.getElementById('addModal').style.display='none'; document.getElementById('confirmModal').style.display='flex';
         }
 
         async function finalSave() {
-            await fetch(`${API}/confirm_save`, {method:'POST', headers:{'Content-Type':'application/json'}, 
-                body:JSON.stringify({user_id:uid, meal_type:activeM, date:document.getElementById('datePicker').value, name:document.getElementById('resN').value, kcal:document.getElementById('resK').value, ...lastRes})});
+            await fetch(`${API}/confirm_save`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:uid, meal_type:activeM, date:selDate, ...lastAi, name:document.getElementById('resN').value, kcal:document.getElementById('resK').value})});
             document.getElementById('confirmModal').style.display='none'; load();
         }
 
-        function changeDay(delta) { 
-            let d = new Date(document.getElementById('datePicker').value); 
-            d.setDate(d.getDate() + delta); 
-            document.getElementById('datePicker').value = d.toISOString().split('T')[0]; 
-            load(); 
+        function changeDay(step) { let d=new Date(selDate); d.setDate(d.getDate()+step); selDate=d.toISOString().split('T')[0]; load(); }
+        function toggleM(m) { const el=document.getElementById('det_'+m); el.style.display=el.style.display==='block'?'none':'block'; }
+        function toggleChat() { const w=document.getElementById('chat-win'); w.style.display=w.style.display==='flex'?'none':'flex'; }
+        async function sendChat() {
+            const i=document.getElementById('chatIn'); const txt=i.value; i.value="";
+            document.getElementById('chat-msgs').innerHTML += `<div style="align-self:flex-end; background:var(--indigo); color:white; padding:8px 12px; border-radius:15px;">${txt}</div>`;
+            const fd=new FormData(); fd.append('msg', txt);
+            const r=await fetch(`${API}/chat`, {method:'POST', body:fd});
+            const d=await r.json();
+            document.getElementById('chat-msgs').innerHTML += `<div style="align-self:flex-start; background:#f1f5f9; padding:8px 12px; border-radius:15px;">${d.reply}</div>`;
         }
-        function toggleM(m) { const el = document.getElementById('det_'+m); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
-        function openAdd(m) { activeM = m; document.getElementById('addModal').style.display='flex'; }
-        function closeModal(id) { document.getElementById(id).style.display='none'; }
 
         load(); tg.expand();
     </script>
