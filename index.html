@@ -6,33 +6,30 @@
     <title>FitLio Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --accent: #10b981; --blue: #3b82f6; --pink: #ec4899; --indigo: #6366f1; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        :root { --bg: #f8fafc; --card: #ffffff; --accent: #10b981; --blue: #3b82f6; --pink: #ec4899; --indigo: #6366f1; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #1e293b; }
         .neu-card { background: var(--card); border-radius: 28px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); margin-bottom: 15px; }
-        
-        /* 6 кілець: 3 в ряд */
-        .macro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
-        .ring-box { position: relative; width: 85px; height: 85px; margin: 0 auto; }
+        .macro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+        .ring-box { position: relative; width: 85px; height: 85px; margin: 0 auto; text-align: center; }
         .ring-box svg { transform: rotate(-90deg); width: 85px; height: 85px; }
         circle { fill: none; stroke-width: 6; stroke-linecap: round; }
         .ring-fg { stroke-dasharray: 226; stroke-dashoffset: 226; transition: 0.6s ease; }
-        .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .ring-label b { font-size: 14px; line-height: 1; }
-        .ring-label small { font-size: 9px; color: #64748b; margin-top: 2px; }
-
-        .water-card { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 20px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border: 1px solid #bae6fd; }
+        .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .ring-label b { font-size: 13px; }
+        .ring-label small { font-size: 9px; color: #64748b; }
+        .water-btn { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 15px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-bottom: 15px; font-weight: bold; width: 100%; box-sizing: border-box; }
         .meal-card { background: #fff; border-radius: 20px; padding: 15px; margin-bottom: 10px; border: 1px solid #f1f5f9; }
-        .btn { border: none; border-radius: 12px; padding: 10px; font-weight: bold; cursor: pointer; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .modal-content { width: 90%; background: #fff; padding: 25px; border-radius: 30px; max-height: 80vh; overflow-y: auto; }
-        input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #eee; margin-top: 5px; box-sizing: border-box; }
+        .modal-content { width: 90%; background: #fff; padding: 25px; border-radius: 30px; }
+        .btn { border: none; border-radius: 12px; padding: 12px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+        input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #eee; border-radius: 8px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
         <h2 style="margin:0;">Мій Прогрес</h2>
-        <button class="btn" style="background:none; font-size:22px;" onclick="openModal('profileModal')">⚙️</button>
+        <button style="background:none; border:none; font-size:20px;" onclick="openModal('profileModal')">⚙️</button>
     </div>
 
     <div class="neu-card">
@@ -42,7 +39,7 @@
                 <circle id="m_ring" stroke="var(--accent)" stroke-width="10" stroke-dasharray="452" stroke-dashoffset="452" cx="80" cy="80" r="72"></circle>
             </svg>
             <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
-                <h1 id="k_left" style="margin:0; font-size:32px;">0</h1><small id="k_norm">з 2000</small>
+                <h1 id="k_left" style="margin:0;">0</h1><small id="k_norm">з 2000</small>
             </div>
         </div>
 
@@ -56,63 +53,34 @@
         </div>
     </div>
 
-    <div class="water-card">
-        <div><b>💧 Гідратація</b><br><small id="w_txt">Випито: 0 / 2.5 л</small></div>
-        <button class="btn" style="background:var(--blue); color:#fff; width:80px;" onclick="addWater()">+0.25л</button>
-    </div>
+    <button class="water-btn" onclick="addWater()">
+        <span>💧 Додати воду</span>
+        <span id="w_val">0 / 2.5 л</span>
+    </button>
 
-    <div id="meals_list">
-        <div class="meal-card">
-            <div style="display:flex; justify-content:space-between;" onclick="toggleMeal('Breakfast')">
-                <b>🍳 Сніданок</b> <span><span id="k_Breakfast">0</span> ккал <button class="btn" style="padding:2px 8px; margin-left:5px;" onclick="event.stopPropagation(); openAdd('Breakfast')">+</button></span>
-            </div>
-            <div id="det_Breakfast" class="meal-det"></div>
-        </div>
-        <div class="meal-card">
-            <div style="display:flex; justify-content:space-between;" onclick="toggleMeal('Lunch')">
-                <b>🍲 Обід</b> <span><span id="k_Lunch">0</span> ккал <button class="btn" style="padding:2px 8px; margin-left:5px;" onclick="event.stopPropagation(); openAdd('Lunch')">+</button></span>
-            </div>
-            <div id="det_Lunch" class="meal-det"></div>
-        </div>
-        <div class="meal-card">
-            <div style="display:flex; justify-content:space-between;" onclick="toggleMeal('Dinner')">
-                <b>🥗 Вечеря</b> <span><span id="k_Dinner">0</span> ккал <button class="btn" style="padding:2px 8px; margin-left:5px;" onclick="event.stopPropagation(); openAdd('Dinner')">+</button></span>
-            </div>
-            <div id="det_Dinner" class="meal-det"></div>
-        </div>
+    <div id="meals">
+        <div class="meal-card" onclick="openAdd('Breakfast')"><b>🍳 Сніданок</b> <span style="float:right;"><span id="k_Breakfast">0</span> ккал +</span></div>
+        <div class="meal-card" onclick="openAdd('Lunch')"><b>🍲 Обід</b> <span style="float:right;"><span id="k_Lunch">0</span> ккал +</span></div>
+        <div class="meal-card" onclick="openAdd('Dinner')"><b>🥗 Вечеря</b> <span style="float:right;"><span id="k_Dinner">0</span> ккал +</span></div>
     </div>
 
     <div id="inputModal" class="modal"><div class="modal-content">
-        <h3>Додати їжу</h3>
-        <button class="btn" style="background:var(--accent); color:#fff; width:100%; margin-bottom:10px;" onclick="document.getElementById('fIn').click()">📸 Зробити фото</button>
-        <textarea id="tFood" style="width:100%; height:80px; padding:10px; border-radius:10px;" placeholder="Або введіть текст..."></textarea>
-        <button class="btn" style="background:var(--blue); color:#fff; width:100%; margin-top:10px;" onclick="doAnalyze()">Аналізувати</button>
-        <button class="btn" style="width:100%; margin-top:10px;" onclick="closeModal('inputModal')">Закрити</button>
+        <h3>Додати страву</h3>
+        <button class="btn" style="background:var(--accent); color:#fff;" onclick="document.getElementById('fIn').click()">📸 Фото / Текст</button>
+        <textarea id="tFood" style="width:100%; height:60px; margin-top:10px;" placeholder="Що ви з'їли?"></textarea>
+        <button class="btn" style="background:var(--blue); color:#fff;" onclick="doAnalyze()">Аналіз</button>
+        <button class="btn" onclick="closeModal('inputModal')">Назад</button>
     </div></div>
 
     <div id="confirmModal" class="modal"><div class="modal-content">
-        <h3>Результат ШІ</h3>
-        <input id="en" placeholder="Назва">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-            <input id="ek" type="number" placeholder="Ккал"> <input id="ep" type="number" placeholder="Білки">
-            <input id="ef" type="number" placeholder="Жири"> <input id="ec" type="number" placeholder="Вугл">
+        <h3>Підтвердження</h3>
+        <input id="en">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <input id="ek" type="number" placeholder="Ккал"> <input id="ep" type="number" placeholder="Б">
+            <input id="ef" type="number" placeholder="Ж"> <input id="ec" type="number" placeholder="В">
             <input id="esu" type="number" placeholder="Цукор"> <input id="esa" type="number" placeholder="Сіль">
         </div>
-        <button class="btn" style="background:var(--accent); color:#fff; width:100%; margin-top:20px;" onclick="finalSave()">Зберегти</button>
-    </div></div>
-
-    <div id="profileModal" class="modal"><div class="modal-content">
-        <h3>Налаштування норм</h3>
-        <input id="weight" type="number" placeholder="Вага (кг)">
-        <input id="height" type="number" placeholder="Зріст (см)">
-        <select id="goal"><option value="lose">Схуднення</option><option value="maintain">Підтримка</option><option value="gain">Набір</option></select>
-        <hr style="margin:15px 0; opacity:0.1;">
-        <small>Власні цілі (ккал, Б, Ж, В):</small>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <input id="c_kcal" type="number" placeholder="Ккал"> <input id="c_p" type="number" placeholder="Б">
-            <input id="c_f" type="number" placeholder="Ж"> <input id="c_c" type="number" placeholder="В">
-        </div>
-        <button class="btn" style="background:var(--blue); color:#fff; width:100%; margin-top:20px;" onclick="saveProfile()">Зберегти</button>
+        <button class="btn" style="background:var(--accent); color:#fff;" onclick="finalSave()">Зберегти</button>
     </div></div>
 
     <input type="file" id="fIn" style="display:none" onchange="doAnalyze()">
@@ -144,29 +112,18 @@
             upR('r_sugar','v_sugar','n_sugar', d.sugar, d.norms.sugar); 
             upR('r_salt','v_salt','n_salt', d.salt, d.norms.salt); 
             upR('r_water','v_water','n_water', d.water, 2.5);
-
-            document.getElementById('w_txt').innerText = `Випито: ${d.water} / 2.5 л`;
-
-            for (let mt in d.meals) {
-                const m = d.meals[mt];
-                document.getElementById('k_'+mt).innerText = m.kcal;
-                const det = document.getElementById('det_'+mt);
-                det.innerHTML = `<div style="font-size:10px; color:gray; margin-bottom:5px;">Б:${m.p} Ж:${m.f} В:${m.c} | Ц:${m.sugar} С:${m.salt}</div>` + 
-                    m.list.map(i => `<div style="display:flex;justify-content:space-between;font-size:13px;"><span>${i.name}</span><b>${i.kcal}</b></div>`).join('');
-            }
+            
+            document.getElementById('w_val').innerText = `${d.water} / 2.5 л`;
+            for (let mt in d.meals) document.getElementById('k_'+mt).innerText = d.meals[mt].kcal;
         }
 
-        async function addWater() { await fetch(`${API}/add_water?user_id=${uid}&date=${selectedDate}&amount=0.25`, {method:'POST'}); load(); }
-        
         function openAdd(mt) { activeMeal=mt; openModal('inputModal'); }
         async function doAnalyze() {
-            tg.MainButton.setText("ШІ аналізує...").show();
             const fd = new FormData();
             if(document.getElementById('fIn').files[0]) fd.append('file', document.getElementById('fIn').files[0]);
-            if(document.getElementById('tFood').value) fd.append('text_input', document.getElementById('tFood').value);
+            fd.append('text_input', document.getElementById('tFood').value);
             const r = await fetch(`${API}/analyze`, {method:'POST', body:fd});
             const res = await r.json();
-            tg.MainButton.hide();
             document.getElementById('en').value=res.name; document.getElementById('ek').value=res.kcal; 
             document.getElementById('ep').value=res.p; document.getElementById('ef').value=res.f; 
             document.getElementById('ec').value=res.c; document.getElementById('esu').value=res.sugar; document.getElementById('esa').value=res.salt;
@@ -174,18 +131,18 @@
         }
 
         async function finalSave() {
-            const data = { user_id:uid, date:selectedDate, meal_type:activeMeal, name:document.getElementById('en').value, kcal:document.getElementById('ek').value, p:document.getElementById('ep').value, f:document.getElementById('ef').value, c:document.getElementById('ec').value, sugar:document.getElementById('esu').value, salt:document.getElementById('esa').value };
+            const data = { 
+                user_id: uid, date: selectedDate, meal_type: activeMeal, 
+                name: document.getElementById('en').value, kcal: document.getElementById('ek').value, 
+                p: document.getElementById('ep').value, f: document.getElementById('ef').value, 
+                c: document.getElementById('ec').value, sugar: document.getElementById('esu').value || 0, 
+                salt: document.getElementById('esa').value || 0 
+            };
             await fetch(`${API}/confirm_save`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             closeModal('confirmModal'); load();
         }
 
-        async function saveProfile() {
-            const data = { user_id:uid, weight:document.getElementById('weight').value, height:document.getElementById('height').value, goal:document.getElementById('goal').value, c_kcal:document.getElementById('c_kcal').value, c_p:document.getElementById('c_p').value, c_f:document.getElementById('c_f').value, c_c:document.getElementById('c_c').value };
-            await fetch(`${API}/save_profile`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-            closeModal('profileModal'); load();
-        }
-
-        function toggleMeal(mt) { const d=document.getElementById('det_'+mt); d.style.display=d.style.display==='block'?'none':'block'; }
+        async function addWater() { await fetch(`${API}/add_water?user_id=${uid}&date=${selectedDate}&amount=0.25`, {method:'POST'}); load(); }
         function openModal(id) { document.getElementById(id).style.display='flex'; }
         function closeModal(id) { document.getElementById(id).style.display='none'; }
         
