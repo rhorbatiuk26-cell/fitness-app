@@ -7,7 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            var(--bg-color): #000000;
+            --bg-color: #000000;
             --card-bg: #1c1c1e;
             --text-main: #ffffff;
             --text-sec: #8e8e93;
@@ -31,7 +31,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 90px; }
         
-        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-color); position: sticky; top: 0; z-index: 10; border-bottom: 0.5px solid rgba(255,255,255,0.1); }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-color); position: sticky; top: 0; z-index: 10; border-bottom: 0.5px solid rgba(142,142,147,0.2); }
         .tg-header { display: flex; flex-direction: column; }
         .tg-title { font-size: 17px; font-weight: 600; }
         .tg-subtitle { font-size: 13px; color: var(--text-sec); }
@@ -47,13 +47,13 @@
         .main-ring-box { display: flex; gap: 20px; align-items: center; justify-content: center; width: 100%; }
         .main-ring { position: relative; width: 140px; height: 140px; }
         
-        .macros-rings { display: flex; justify-content: center; width: 100%; gap: 12px; flex-wrap: wrap; }
-        .small-ring-box { display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 28%; }
+        .macros-rings { display: flex; justify-content: center; width: 100%; gap: 15px; flex-wrap: wrap; }
+        .small-ring-box { display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 25%; }
         .small-ring { position: relative; width: 65px; height: 65px; }
         
         svg { transform: rotate(-90deg); width: 100%; height: 100%; }
         circle { fill: none; stroke-width: 8; stroke-linecap: round; }
-        .bg-circle { stroke: rgba(255,255,255,0.05); stroke-width: 7; }
+        .bg-circle { stroke: rgba(142,142,147,0.2); stroke-width: 7; }
         
         .ring-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
         .main-ring .ring-text span { display: block; font-size: 28px; font-weight: 700; color: var(--accent); }
@@ -61,47 +61,47 @@
         .small-ring-box label { margin-top: 5px; font-size: 12px; font-weight: 500; color: var(--text-sec); }
         .small-ring .ring-text { font-size: 12px; font-weight: 600; }
         
-        .food-quick-panel { display: flex; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; width: 100%; margin-top: 15px; gap: 10px; }
+        .food-quick-panel { display: flex; justify-content: space-around; background: rgba(142,142,147,0.1); padding: 15px; border-radius: 12px; width: 100%; margin-top: 15px; gap: 10px; }
         .quick-btn { background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; flex: 1; text-align: center; padding: 10px; border-radius: 8px; transition: background 0.2s; }
 
         .food-list { margin-top: 25px; padding: 0 20px; }
         .food-list h2 { font-size: 22px; margin-bottom: 15px; }
         .meal-categories-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
-        .meal-category-card { background: var(--card-bg); border-radius: 16px; padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .meal-category-card { background: var(--card-bg); border-radius: 16px; padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .category-info { display: flex; flex-direction: column; }
-        .category-name { font-size: 17px; font-weight: 600; }
+        .category-name { font-size: 16px; font-weight: 600; }
         .category-kcal { font-size: 14px; color: var(--accent); margin-top: 2px; }
         
-        .water-card { margin-top: 15px; background: var(--card-bg); border-radius: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .water-card { margin-top: 15px; background: var(--card-bg); border-radius: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .water-info h3 { font-size: 17px; margin-bottom: 4px; color: var(--water); }
         .water-info p { color: var(--text-sec); font-size: 14px; }
         .add-water-btn { background: var(--water); color: white; border: none; border-radius: 50px; padding: 8px 16px; font-weight: 600; cursor: pointer; }
 
-        .food-item { background: rgba(255,255,255,0.02); border-radius: 16px; padding: 15px; margin-bottom: 10px; border-bottom: 0.5px solid rgba(255,255,255,0.05); }
+        .food-item { background: rgba(142,142,147,0.1); border-radius: 16px; padding: 15px; margin-bottom: 10px; border-bottom: 0.5px solid rgba(142,142,147,0.2); }
         .food-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 16px; margin-bottom: 5px; }
         .food-macros { font-size: 13px; color: var(--text-sec); display: flex; gap: 8px; flex-wrap: wrap; }
-        .food-macros span { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
+        .food-macros span { background: rgba(142,142,147,0.2); padding: 2px 6px; border-radius: 4px; color: var(--text-main); }
 
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 100; justify-content: center; align-items: flex-end; }
-        .modal-content { background: var(--card-bg); width: 100%; max-height: 90vh; border-radius: 20px 20px 0 0; padding: 20px; overflow-y: auto; border-top: 0.5px solid rgba(255,255,255,0.1); }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 100; justify-content: center; align-items: flex-end; }
+        .modal-content { background: var(--card-bg); width: 100%; max-height: 90vh; border-radius: 20px 20px 0 0; padding: 20px; overflow-y: auto; border-top: 0.5px solid rgba(142,142,147,0.2); }
         .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 20px; font-weight: 700; color: var(--text-main); }
-        .close-btn { background: rgba(255,255,255,0.05); border: none; width: 30px; height: 30px; border-radius: 15px; cursor: pointer; font-size: 16px; color: var(--text-sec); }
+        .close-btn { background: rgba(142,142,147,0.2); border: none; width: 30px; height: 30px; border-radius: 15px; cursor: pointer; font-size: 16px; color: var(--text-main); }
         
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 14px; color: var(--text-sec); font-weight: 500; }
-        input, select, textarea { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.05); color: var(--text-main); font-size: 16px; outline: none; }
+        input, select, textarea { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid rgba(142,142,147,0.2); background: rgba(142,142,147,0.1); color: var(--text-main); font-size: 16px; outline: none; }
         .btn-primary { width: 100%; background: var(--btn-bg); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 17px; font-weight: 600; margin-top: 10px; cursor: pointer; }
         .btn-secondary { background: var(--accent); color: #000; }
 
         .fab-container { position: fixed; bottom: 100px; right: 20px; z-index: 5; }
         .fab { width: 56px; height: 56px; border-radius: 28px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; font-size: 24px; display: flex; justify-content: center; align-items: center; color: white; background: var(--btn-bg); }
 
-        .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 80px; background: var(--card-bg); border-top: 0.5px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; align-items: center; padding: 0 10px; padding-bottom: 15px; z-index: 10; }
+        .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 80px; background: var(--card-bg); border-top: 0.5px solid rgba(142,142,147,0.2); display: flex; justify-content: space-around; align-items: center; padding: 0 10px; padding-bottom: 15px; z-index: 10; }
         .tab-item { display: flex; flex-direction: column; align-items: center; color: var(--text-sec); font-size: 11px; cursor: pointer; flex: 1; }
         .tab-item.active { color: var(--accent); }
         .tab-item span { font-size: 24px; margin-bottom: 4px; }
         
-        .divider { height: 1px; background: rgba(255,255,255,0.1); margin: 25px 0; }
+        .divider { height: 1px; background: rgba(142,142,147,0.2); margin: 25px 0; }
         .loader { display: none; text-align: center; padding: 20px; color: var(--accent); }
     </style>
 </head>
@@ -333,7 +333,6 @@
                 currentFoods = data.foods;
                 document.getElementById('water-current').innerText = data.water_ml;
                 
-                // Заповнюємо поля ручних налаштувань поточними даними
                 document.getElementById('man-kcal').value = Math.round(data.user_norms.kcal);
                 document.getElementById('man-p').value = Math.round(data.user_norms.protein);
                 document.getElementById('man-f').value = Math.round(data.user_norms.fat);
@@ -486,7 +485,7 @@
             } else {
                 filtered.forEach(f => {
                     list.innerHTML += `
-                        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(142,142,147,0.2);">
                             <div style="display:flex; flex-direction:column;">
                                 <span style="font-weight:600; color:var(--text-main);">${f.name}</span>
                             </div>
@@ -511,7 +510,7 @@
                 body: JSON.stringify({ tg_id: userId, message: msg })
             });
             const data = await res.json();
-            box.innerHTML += `<div style="align-self: flex-start; background: rgba(255,255,255,0.05); color: var(--text-main); padding: 10px 14px; border-radius: 18px 18px 18px 0; max-width: 80%;">${data.reply}</div>`;
+            box.innerHTML += `<div style="align-self: flex-start; background: rgba(142,142,147,0.1); color: var(--text-main); padding: 10px 14px; border-radius: 18px 18px 18px 0; max-width: 80%;">${data.reply}</div>`;
             box.scrollTop = box.scrollHeight;
         }
         
