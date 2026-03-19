@@ -2,109 +2,434 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitLio Pro 2026</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FitLio Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --bg: #f8fafc; --accent: #10b981; --indigo: #6366f1; --rose: #f43f5e; --amber: #f59e0b; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; padding-bottom: 90px; }
-        .card { background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 12px; }
-        .macro-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px; }
-        .mini-ring { position: relative; text-align: center; font-size: 8px; font-weight: bold; cursor: pointer; }
-        .mini-ring svg { transform: rotate(-90deg); width: 100%; }
-        .ring-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box; }
-        .btn-main { background: var(--accent); color: white; width: 100%; padding: 15px; border-radius: 15px; border: none; font-weight: bold; }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .chat-fab { position: fixed; bottom: 20px; left: 20px; background: var(--indigo); color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        :root {
+            --bg-color: #f2f2f7;
+            --card-bg: #ffffff;
+            --text-main: #000000;
+            --text-sec: #8e8e93;
+            --accent: #007aff;
+            --ring-kcal: #ff3b30;
+            --ring-p: #34c759;
+            --ring-f: #ff9500;
+            --ring-c: #007aff;
+            --ring-sugar: #af52de;
+            --ring-salt: #ff2d55;
+            --water: #32ade6;
+        }
+        [data-theme="dark"] {
+            --bg-color: #000000;
+            --card-bg: #1c1c1e;
+            --text-main: #ffffff;
+            --text-sec: #8e8e93;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 80px; transition: background-color 0.3s; }
+        
+        /* Header & Calendar */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--card-bg); border-bottom: 0.5px solid rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
+        .calendar { display: flex; align-items: center; gap: 15px; font-weight: 600; font-size: 17px; }
+        .calendar button { background: none; border: none; font-size: 20px; color: var(--accent); cursor: pointer; }
+        .settings-btn { font-size: 24px; background: none; border: none; cursor: pointer; color: var(--text-main); }
+
+        /* Rings Container */
+        .dashboard { padding: 20px; }
+        .rings-wrapper { display: flex; flex-direction: column; align-items: center; gap: 20px; background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .main-ring { position: relative; width: 160px; height: 160px; }
+        .macros-rings { display: flex; justify-content: space-around; width: 100%; gap: 10px; flex-wrap: wrap; }
+        .small-ring-box { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+        .small-ring { position: relative; width: 60px; height: 60px; }
+        
+        svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+        circle { fill: none; stroke-width: 8; stroke-linecap: round; }
+        .bg-circle { stroke: var(--bg-color); }
+        
+        .ring-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+        .main-ring .ring-text span { display: block; font-size: 24px; font-weight: 700; }
+        .main-ring .ring-text small { font-size: 12px; color: var(--text-sec); }
+        .small-ring-box label { margin-top: 5px; font-size: 12px; font-weight: 500; color: var(--text-sec); }
+        .small-ring .ring-text { font-size: 12px; font-weight: 600; }
+
+        /* Water Tracker */
+        .water-card { margin-top: 15px; background: var(--card-bg); border-radius: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .water-info h3 { font-size: 17px; margin-bottom: 4px; }
+        .water-info p { color: var(--text-sec); font-size: 14px; }
+        .add-water-btn { background: var(--water); color: white; border: none; border-radius: 50px; padding: 8px 16px; font-weight: 600; cursor: pointer; }
+
+        /* Food List */
+        .food-list { margin-top: 20px; padding: 0 20px; }
+        .food-list h2 { font-size: 20px; margin-bottom: 10px; }
+        .food-item { background: var(--card-bg); border-radius: 16px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .food-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 16px; margin-bottom: 5px; }
+        .food-macros { font-size: 13px; color: var(--text-sec); display: flex; gap: 8px; flex-wrap: wrap; }
+        .food-macros span { background: var(--bg-color); padding: 2px 6px; border-radius: 4px; }
+
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 100; justify-content: center; align-items: flex-end; }
+        .modal-content { background: var(--card-bg); width: 100%; max-height: 90vh; border-radius: 20px 20px 0 0; padding: 20px; overflow-y: auto; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 20px; font-weight: 700; }
+        .close-btn { background: var(--bg-color); border: none; width: 30px; height: 30px; border-radius: 15px; cursor: pointer; font-size: 16px; color: var(--text-sec); }
+        
+        /* Forms */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 14px; color: var(--text-sec); font-weight: 500; }
+        input, select, textarea { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background: var(--bg-color); color: var(--text-main); font-size: 16px; outline: none; }
+        .btn-primary { width: 100%; background: var(--accent); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 17px; font-weight: 600; margin-top: 10px; cursor: pointer; }
+
+        /* Floating Actions */
+        .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .fab { width: 56px; height: 56px; border-radius: 28px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; font-size: 24px; display: flex; justify-content: center; align-items: center; color: white; }
+        .fab-add { background: var(--ring-kcal); }
+        .fab-chat { background: var(--accent); }
+
+        /* Loader */
+        .loader { display: none; text-align: center; padding: 20px; color: var(--accent); }
     </style>
 </head>
 <body>
 
-    <div id="onboarding" class="modal" style="display:none; background:white; flex-direction:column; padding:25px; overflow-y:auto;">
-        <h3>Налаштування профілю ⚙️</h3>
-        <select id="reg_goal"><option value="Схуднення">Схуднення</option><option value="Баланс">Баланс</option><option value="М'язи">Ріст м'язів</option></select>
-        <input id="reg_tw" type="number" placeholder="Бажана вага (кг)">
-        <input id="reg_w" type="number" placeholder="Поточна вага (кг)">
-        <input id="reg_h" type="number" placeholder="Зріст (см)">
-        <input id="reg_a" type="number" placeholder="Вік">
-        <button class="btn-main" onclick="saveProfile()">Зберегти</button>
-        <button onclick="document.getElementById('onboarding').style.display='none'" style="margin-top:10px; background:none; border:none; color:gray;">Закрити</button>
-    </div>
-
-    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-        <span onclick="changeDay(-1)">◀</span>
-        <b id="dateTitle">Сьогодні</b>
-        <span onclick="changeDay(1)">▶</span>
-        <span onclick="document.getElementById('onboarding').style.display='flex'">⚙️</span>
-    </div>
-
-    <div class="card" style="text-align:center;">
-        <div style="position:relative; display:inline-block; margin-bottom:10px;">
-            <svg width="120" height="120" viewBox="0 0 160 160"><circle stroke="#eee" stroke-width="12" fill="none" cx="80" cy="80" r="72"/><circle id="ring_kcal" stroke="var(--accent)" stroke-width="12" stroke-dasharray="452" fill="none" cx="80" cy="80" r="72" style="transform:rotate(-90deg); transform-origin:center; transition: 0.5s;"/></svg>
-            <div class="ring-inner"><b id="txt_kcal_left" style="font-size:22px;">0</b><small id="txt_goal">ккал</small></div>
+    <header>
+        <div class="calendar">
+            <button onclick="changeDate(-1)">◀</button>
+            <span id="date-display">Сьогодні</span>
+            <button onclick="changeDate(1)">▶</button>
         </div>
-        <div class="macro-grid" id="macro_circles"></div>
+        <button class="settings-btn" onclick="openModal('settings-modal')">⚙️</button>
+    </header>
+
+    <div class="dashboard">
+        <div class="rings-wrapper">
+            <div class="main-ring">
+                <svg viewBox="0 0 100 100">
+                    <circle class="bg-circle" cx="50" cy="50" r="45"></circle>
+                    <circle id="ring-kcal" cx="50" cy="50" r="45" stroke="var(--ring-kcal)" stroke-dasharray="283" stroke-dashoffset="283"></circle>
+                </svg>
+                <div class="ring-text">
+                    <span id="text-kcal">0</span>
+                    <small>ккал із <span id="norm-kcal">0</span></small>
+                </div>
+            </div>
+            
+            <div class="macros-rings">
+                <div class="small-ring-box" onclick="showDrilldown('Білки', 'protein')">
+                    <div class="small-ring">
+                        <svg viewBox="0 0 100 100">
+                            <circle class="bg-circle" cx="50" cy="50" r="40"></circle>
+                            <circle id="ring-p" cx="50" cy="50" r="40" stroke="var(--ring-p)" stroke-dasharray="251" stroke-dashoffset="251"></circle>
+                        </svg>
+                        <div class="ring-text" id="text-p">0g</div>
+                    </div>
+                    <label>Білки</label>
+                </div>
+                <div class="small-ring-box" onclick="showDrilldown('Жири', 'fat')">
+                    <div class="small-ring">
+                        <svg viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-f" cx="50" cy="50" r="40" stroke="var(--ring-f)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg>
+                        <div class="ring-text" id="text-f">0g</div>
+                    </div>
+                    <label>Жири</label>
+                </div>
+                <div class="small-ring-box" onclick="showDrilldown('Вуглеводи', 'carbs')">
+                    <div class="small-ring">
+                        <svg viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-c" cx="50" cy="50" r="40" stroke="var(--ring-c)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg>
+                        <div class="ring-text" id="text-c">0g</div>
+                    </div>
+                    <label>Вугл.</label>
+                </div>
+                <div class="small-ring-box" onclick="showDrilldown('Цукор', 'sugar')">
+                    <div class="small-ring">
+                        <svg viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-sugar" cx="50" cy="50" r="40" stroke="var(--ring-sugar)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg>
+                        <div class="ring-text" id="text-sugar">0g</div>
+                    </div>
+                    <label>Цукор</label>
+                </div>
+                <div class="small-ring-box" onclick="showDrilldown('Сіль', 'salt')">
+                    <div class="small-ring">
+                        <svg viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-salt" cx="50" cy="50" r="40" stroke="var(--ring-salt)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg>
+                        <div class="ring-text" id="text-salt">0g</div>
+                    </div>
+                    <label>Сіль</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="water-card">
+            <div class="water-info">
+                <h3>Вода</h3>
+                <p><span id="water-current">0</span> мл / 2000 мл</p>
+            </div>
+            <button class="add-water-btn" onclick="addWater()">+ 250 мл</button>
+        </div>
     </div>
 
-    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-        <span>💧 Вода: <b id="txt_water">0</b>л</span>
-        <button onclick="addWater()" style="background:var(--blue); color:white; border:none; padding:8px 12px; border-radius:10px;">+0.25</button>
+    <div class="food-list">
+        <h2>Прийоми їжі</h2>
+        <div id="food-container"></div>
     </div>
 
-    <div id="meal_list"></div>
+    <div class="fab-container">
+        <button class="fab fab-chat" onclick="openModal('chat-modal')">💬</button>
+        <button class="fab fab-add" onclick="openModal('add-food-modal')">+</button>
+    </div>
 
-    <div class="chat-fab" onclick="document.getElementById('chatModal').style.display='flex'">💬</div>
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Налаштування <button class="close-btn" onclick="closeModal('settings-modal')">✕</button></div>
+            <div class="form-group"><label>Ціль</label><select id="st-goal"><option value="Схуднення">Схуднення</option><option value="Баланс">Баланс</option><option value="М'язи">М'язи</option></select></div>
+            <div class="form-group"><label>Вік</label><input type="number" id="st-age" placeholder="25"></div>
+            <div class="form-group"><label>Зріст (см)</label><input type="number" id="st-height" placeholder="175"></div>
+            <div class="form-group"><label>Поточна вага (кг)</label><input type="number" id="st-weight" placeholder="70"></div>
+            <div class="form-group"><label>Бажана вага (кг)</label><input type="number" id="st-target" placeholder="65"></div>
+            <button class="btn-primary" onclick="saveSettings()">Розрахувати норми через AI</button>
+            <div id="settings-loader" class="loader">Рахуємо...</div>
+        </div>
+    </div>
 
-    <div id="chatModal" class="modal"><div class="card" style="width:90%; height:70%; display:flex; flex-direction:column;">
-        <div style="display:flex; justify-content:space-between;"><b>AI Дієтолог</b> <span onclick="document.getElementById('chatModal').style.display='none'">✕</span></div>
-        <div id="chatMsgs" style="flex:1; overflow-y:auto; font-size:13px; margin:10px 0;"></div>
-        <input id="chatIn" placeholder="Запитай..."><button class="btn-main" onclick="sendChat()">🚀</button>
-    </div></div>
+    <div id="add-food-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Додати їжу <button class="close-btn" onclick="closeModal('add-food-modal')">✕</button></div>
+            <div class="form-group">
+                <label>Опишіть страву (напр: Яєчня з 2 яєць і тост)</label>
+                <textarea id="food-text" rows="3"></textarea>
+            </div>
+            <button class="btn-primary" onclick="addFoodText()">Аналізувати текст</button>
+            <div style="text-align: center; margin: 15px 0; color: var(--text-sec);">або</div>
+            <div class="form-group">
+                <label>Завантажити фото</label>
+                <input type="file" id="food-photo" accept="image/*">
+            </div>
+            <button class="btn-primary" style="background: var(--ring-f);" onclick="addFoodPhoto()">Аналізувати фото</button>
+            <div id="food-loader" class="loader">Аналізуємо склад...</div>
+        </div>
+    </div>
+
+    <div id="drilldown-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><span id="drilldown-title">Нутрієнт</span> <button class="close-btn" onclick="closeModal('drilldown-modal')">✕</button></div>
+            <div id="drilldown-list"></div>
+        </div>
+    </div>
+
+    <div id="chat-modal" class="modal">
+        <div class="modal-content" style="height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header">AI Дієтолог <button class="close-btn" onclick="closeModal('chat-modal')">✕</button></div>
+            <div id="chat-box" style="flex: 1; overflow-y: auto; margin-bottom: 15px; font-size: 15px; display: flex; flex-direction: column; gap: 10px;"></div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="chat-input" placeholder="Запитайте щось..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                <button class="btn-primary" style="width: auto; margin: 0; padding: 0 20px;" onclick="sendChatMessage()">➤</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        const tg = window.Telegram.WebApp; const uid = tg.initDataUnsafe.user?.id || "test_user";
-        const API = "https://fitness-app-production-b4a3.up.railway.app";
-        let selDate = new Date().toISOString().split('T')[0];
-
-        async function load() {
-            const r = await fetch(`${API}/stats?user_id=${uid}&date=${selDate}`);
-            const d = await r.json();
-            if(!d.norms) { document.getElementById('onboarding').style.display='flex'; return; }
-            document.getElementById('dateTitle').innerText = selDate === new Date().toISOString().split('T')[0] ? "Сьогодні" : selDate;
-            document.getElementById('ring_kcal').style.strokeDashoffset = 452 - (452 * Math.min(1, d.totals.kcal / d.norms.kcal));
-            document.getElementById('txt_kcal_left').innerText = Math.max(0, d.norms.kcal - d.totals.kcal);
-            document.getElementById('txt_water').innerText = d.water;
-            
-            const mks = [{id:'p',n:'Біл',c:'var(--accent)',v:d.totals.p,m:d.norms.p},{id:'f',n:'Жир',c:'var(--amber)',v:d.totals.f,m:d.norms.f},{id:'c',n:'Вуг',c:'var(--indigo)',v:d.totals.c,m:d.norms.c},{id:'sugar',n:'Цук',c:'var(--rose)',v:d.totals.sugar,m:d.norms.sugar},{id:'salt',n:'Сіль',c:'gray',v:d.totals.salt,m:d.norms.salt}];
-            document.getElementById('macro_circles').innerHTML = mks.map(m => `<div class="mini-ring"><svg viewBox="0 0 80 80"><circle stroke="#eee" cx="40" cy="40" r="36"/><circle stroke="${m.c}" stroke-dasharray="226" stroke-dashoffset="${226-(226*Math.min(1, m.v/m.m))}" cx="40" cy="40" r="36"/></svg><div class="ring-inner"><b>${Math.round(m.v)}</b><div style="font-size:7px;">/${m.m}</div></div><div>${m.n}</div></div>`).join('');
-            
-            const meals = {Breakfast:"🍳 Сніданок", Snack1:"🍎 Перекус 1", Lunch:"🍲 Обід", Snack2:"🍌 Перекус 2", Dinner:"🥗 Вечеря"};
-            let h = "";
-            for(let k in meals) {
-                h += `<div class="card"><b>${meals[k]}</b> <span>${d.meals[k].kcal} ккал</span><div style="font-size:10px; color:gray;">${d.meals[k].list.map(i => i.food_name).join(', ')}</div></div>`;
-            }
-            document.getElementById('meal_list').innerHTML = h;
-        }
-
-        async function saveProfile() {
-            const data = {user_id:uid, goal:document.getElementById('reg_goal').value, tw:document.getElementById('reg_tw').value, w:document.getElementById('reg_w').value, h:document.getElementById('reg_h').value, a:document.getElementById('reg_a').value};
-            await fetch(`${API}/setup`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-            document.getElementById('onboarding').style.display='none'; load();
-        }
-
-        async function sendChat() {
-            const i = document.getElementById('chatIn'); const txt = i.value; i.value = "";
-            const fd = new FormData(); fd.append('msg', txt);
-            const r = await fetch(`${API}/chat`, {method:'POST', body:fd});
-            const d = await r.json();
-            document.getElementById('chatMsgs').innerHTML += `<div><b>Ви:</b> ${txt}<br><b>AI:</b> ${d.reply}</div><hr>`;
-        }
-
-        function changeDay(s) { let d=new Date(selDate); d.setDate(d.getDate()+s); selDate=d.toISOString().split('T')[0]; load(); }
-        async function addWater() { await fetch(`${API}/water?user_id=${uid}&date=${selDate}&amount=0.25`, {method:'POST'}); load(); }
+        // Твій актуальний бекенд на Railway
+        const API_BASE = "https://fitness-app-production-b4a3.up.railway.app/api";
         
-        load(); tg.expand();
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Теми оформлення
+        if (tg.colorScheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        
+        let userId = tg.initDataUnsafe?.user?.id?.toString() || "test_user_1";
+        let currentDate = new Date();
+        let currentFoods = [];
+
+        function formatDate(d) {
+            return d.toISOString().split('T')[0];
+        }
+
+        function updateDateDisplay() {
+            const today = new Date();
+            if (currentDate.toDateString() === today.toDateString()) {
+                document.getElementById('date-display').innerText = "Сьогодні";
+            } else {
+                document.getElementById('date-display').innerText = currentDate.toLocaleDateString('uk-UA');
+            }
+            fetchDailyData();
+        }
+
+        function changeDate(days) {
+            currentDate.setDate(currentDate.getDate() + days);
+            updateDateDisplay();
+        }
+
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        async function fetchDailyData() {
+            try {
+                const res = await fetch(`${API_BASE}/daily/${userId}/${formatDate(currentDate)}`);
+                const data = await res.json();
+                
+                if (data.needs_setup) {
+                    openModal('settings-modal');
+                    return;
+                }
+                
+                currentFoods = data.foods;
+                document.getElementById('water-current').innerText = data.water_ml;
+                
+                updateUI(data.user_norms, data.foods);
+            } catch (e) {
+                console.error("Error fetching data:", e);
+            }
+        }
+
+        function updateUI(norms, foods) {
+            let totals = { kcal: 0, protein: 0, fat: 0, carbs: 0, sugar: 0, salt: 0 };
+            
+            const container = document.getElementById('food-container');
+            container.innerHTML = '';
+            
+            foods.forEach(f => {
+                totals.kcal += f.kcal; totals.protein += f.protein; totals.fat += f.fat;
+                totals.carbs += f.carbs; totals.sugar += f.sugar; totals.salt += f.salt;
+                
+                container.innerHTML += `
+                    <div class="food-item">
+                        <div class="food-header"><span>${f.name}</span><span>${Math.round(f.kcal)} ккал</span></div>
+                        <div class="food-macros">
+                            <span>Б: ${f.protein}г</span> <span>Ж: ${f.fat}г</span> 
+                            <span>В: ${f.carbs}г</span> <span>Ц: ${f.sugar}г</span> <span>С: ${f.salt}г</span>
+                        </div>
+                    </div>`;
+            });
+
+            document.getElementById('norm-kcal').innerText = Math.round(norms.kcal);
+            
+            setRing('kcal', totals.kcal, norms.kcal, 283, true);
+            setRing('p', totals.protein, norms.protein, 251);
+            setRing('f', totals.fat, norms.fat, 251);
+            setRing('c', totals.carbs, norms.carbs, 251);
+            setRing('sugar', totals.sugar, norms.sugar, 251);
+            setRing('salt', totals.salt, norms.salt, 251);
+        }
+
+        function setRing(id, current, max, circumference, isInt = false) {
+            const val = isInt ? Math.round(current) : current.toFixed(1);
+            document.getElementById(`text-${id}`).innerText = val + (isInt ? '' : 'g');
+            
+            const percentage = Math.min(current / max, 1);
+            const offset = circumference - (percentage * circumference);
+            document.getElementById(`ring-${id}`).style.strokeDashoffset = offset;
+            
+            // Red warning if over limit for sugar/salt
+            if ((id === 'sugar' || id === 'salt') && current > max) {
+                document.getElementById(`text-${id}`).style.color = "var(--ring-kcal)";
+            }
+        }
+
+        async function saveSettings() {
+            document.getElementById('settings-loader').style.display = 'block';
+            const payload = {
+                tg_id: userId,
+                goal: document.getElementById('st-goal').value,
+                age: parseInt(document.getElementById('st-age').value),
+                height: parseFloat(document.getElementById('st-height').value),
+                weight: parseFloat(document.getElementById('st-weight').value),
+                target_weight: parseFloat(document.getElementById('st-target').value)
+            };
+            
+            await fetch(`${API_BASE}/profile`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            document.getElementById('settings-loader').style.display = 'none';
+            closeModal('settings-modal');
+            fetchDailyData();
+        }
+
+        async function addFoodText() {
+            const text = document.getElementById('food-text').value;
+            if (!text) return;
+            
+            document.getElementById('food-loader').style.display = 'block';
+            await fetch(`${API_BASE}/food/text`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), text: text })
+            });
+            
+            document.getElementById('food-text').value = '';
+            document.getElementById('food-loader').style.display = 'none';
+            closeModal('add-food-modal');
+            fetchDailyData();
+        }
+
+        async function addFoodPhoto() {
+            const file = document.getElementById('food-photo').files[0];
+            if (!file) return;
+
+            document.getElementById('food-loader').style.display = 'block';
+            const formData = new FormData();
+            formData.append('tg_id', userId);
+            formData.append('date_str', formatDate(currentDate));
+            formData.append('file', file);
+
+            await fetch(`${API_BASE}/food/photo`, { method: 'POST', body: formData });
+            
+            document.getElementById('food-photo').value = '';
+            document.getElementById('food-loader').style.display = 'none';
+            closeModal('add-food-modal');
+            fetchDailyData();
+        }
+
+        async function addWater() {
+            const formData = new FormData();
+            formData.append('tg_id', userId);
+            formData.append('date_str', formatDate(currentDate));
+            formData.append('amount', 250);
+            
+            await fetch(`${API_BASE}/water`, { method: 'POST', body: formData });
+            fetchDailyData();
+        }
+
+        function showDrilldown(title, macroKey) {
+            document.getElementById('drilldown-title').innerText = title;
+            const list = document.getElementById('drilldown-list');
+            list.innerHTML = '';
+            
+            let filtered = currentFoods.filter(f => f[macroKey] > 0);
+            if (filtered.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-sec); text-align:center;">Немає записів за сьогодні.</p>';
+            } else {
+                filtered.forEach(f => {
+                    list.innerHTML += `
+                        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.1);">
+                            <span>${f.name}</span>
+                            <strong>${f[macroKey]} г</strong>
+                        </div>`;
+                });
+            }
+            openModal('drilldown-modal');
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value;
+            if (!msg) return;
+            
+            const box = document.getElementById('chat-box');
+            box.innerHTML += `<div style="align-self: flex-end; background: var(--accent); color: white; padding: 10px 14px; border-radius: 18px 18px 0 18px;">${msg}</div>`;
+            input.value = '';
+            box.scrollTop = box.scrollHeight;
+
+            const res = await fetch(`${API_BASE}/chat`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tg_id: userId, message: msg })
+            });
+            const data = await res.json();
+            
+            box.innerHTML += `<div style="align-self: flex-start; background: var(--bg-color); color: var(--text-main); padding: 10px 14px; border-radius: 18px 18px 18px 0;">${data.reply}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        // Ініціалізація
+        updateDateDisplay();
     </script>
 </body>
 </html>
