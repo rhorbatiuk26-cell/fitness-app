@@ -1,13 +1,13 @@
 import os
 import json
 from pathlib import Path
-from datetime import date
-from typing import List, Optional
+from datetime import date, timedelta
+from typing import List, Optional, Dict
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Float, Date
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, desc
 from sqlalchemy.orm import declarative_base, sessionmaker
 import google.generativeai as genai
 
@@ -38,7 +38,7 @@ class User(Base):
 
 class FoodLog(Base):
     __tablename__ = "food_logs"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     tg_id = Column(String, index=True)
     log_date = Column(Date, index=True)
     name = Column(String)
@@ -51,7 +51,7 @@ class FoodLog(Base):
 
 class WaterLog(Base):
     __tablename__ = "water_logs"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     tg_id = Column(String, index=True)
     log_date = Column(Date, index=True)
     amount_ml = Column(Float)
@@ -59,14 +59,7 @@ class WaterLog(Base):
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="FitLio Pro API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
@@ -82,163 +75,135 @@ class ProfileData(BaseModel):
 
 class ManualNorms(BaseModel):
     tg_id: str
-    kcal: float
-    protein: float
-    fat: float
-    carbs: float
-    sugar: float
-    salt: float
+    kcal: float; protein: float; fat: float; carbs: float; sugar: float; salt: float
 
 class TextFoodRequest(BaseModel):
-    tg_id: str
-    date: date
-    text: str
+    tg_id: str; date: date; text: str
+
+class BarcodeRequest(BaseModel):
+    tg_id: str; date: date; barcode: str
 
 class ChatMessage(BaseModel):
-    tg_id: str
-    message: str
+    tg_id: str; message: str
+    history: List[Dict[str, str]] = [] # [{'role': 'user', 'text': '...'}, {'role': 'assistant', 'text': '...'}]
 
-# --- Ендпоінти ---
+# --- Ендпоінти: Профіль та Норми ---
 @app.post("/api/profile")
 def update_profile(data: ProfileData):
     db = SessionLocal()
-    prompt = f"""
-    Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}.
-    Limits: Sugar strictly up to 50g, Salt strictly up to 5g.
-    Return ONLY a valid JSON object with keys: kcal, protein, fat, carbs, sugar, salt. Values must be numbers. Do not include markdown.
-    """
-    response = model.generate_content(prompt)
+    prompt = f"Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}. Limits: Sugar up to 50g, Salt up to 5g. Return ONLY a valid JSON with keys: kcal, protein, fat, carbs, sugar, salt."
     try:
+        response = model.generate_content(prompt)
         norms = json.loads(response.text.strip('` \njson'))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to parse Gemini response.")
+    except:
+        norms = {"kcal": 2000, "protein": 100, "fat": 60, "carbs": 200, "sugar": 50, "salt": 5}
 
     user = db.query(User).filter(User.tg_id == data.tg_id).first()
     if not user:
         user = User(tg_id=data.tg_id)
         db.add(user)
     
-    user.goal = data.goal
-    user.weight = data.weight
-    user.target_weight = data.target_weight
-    user.height = data.height
-    user.age = data.age
-    user.norm_kcal = norms.get('kcal', 2000)
-    user.norm_p = norms.get('protein', 100)
-    user.norm_f = norms.get('fat', 60)
-    user.norm_c = norms.get('carbs', 200)
-    user.norm_sugar = norms.get('sugar', 50)
-    user.norm_salt = norms.get('salt', 5)
-    
-    db.commit()
-    db.close()
+    user.goal = data.goal; user.weight = data.weight; user.target_weight = data.target_weight; user.height = data.height; user.age = data.age
+    user.norm_kcal = norms.get('kcal', 2000); user.norm_p = norms.get('protein', 100); user.norm_f = norms.get('fat', 60); user.norm_c = norms.get('carbs', 200); user.norm_sugar = norms.get('sugar', 50); user.norm_salt = norms.get('salt', 5)
+    db.commit(); db.close()
     return {"status": "success", "norms": norms}
 
 @app.post("/api/profile/manual")
 def update_manual_norms(data: ManualNorms):
     db = SessionLocal()
     user = db.query(User).filter(User.tg_id == data.tg_id).first()
-    if not user:
-        user = User(tg_id=data.tg_id)
-        db.add(user)
-    
-    user.norm_kcal = data.kcal
-    user.norm_p = data.protein
-    user.norm_f = data.fat
-    user.norm_c = data.carbs
-    user.norm_sugar = data.sugar
-    user.norm_salt = data.salt
-    
-    db.commit()
-    db.close()
+    if not user: user = User(tg_id=data.tg_id); db.add(user)
+    user.norm_kcal = data.kcal; user.norm_p = data.protein; user.norm_f = data.fat; user.norm_c = data.carbs; user.norm_sugar = data.sugar; user.norm_salt = data.salt
+    db.commit(); db.close()
     return {"status": "success"}
 
+# --- Ендпоінти: Дані ---
 @app.get("/api/daily/{tg_id}/{log_date}")
 def get_daily_data(tg_id: str, log_date: date):
     db = SessionLocal()
     user = db.query(User).filter(User.tg_id == tg_id).first()
-    if not user:
-        db.close()
-        return {"needs_setup": True}
+    if not user: return {"needs_setup": True}
     
     foods = db.query(FoodLog).filter(FoodLog.tg_id == tg_id, FoodLog.log_date == log_date).all()
     water = db.query(WaterLog).filter(WaterLog.tg_id == tg_id, WaterLog.log_date == log_date).all()
-    total_water = sum([w.amount_ml for w in water])
-    
     db.close()
     return {
         "needs_setup": False,
-        "user_norms": {
-            "kcal": user.norm_kcal, "protein": user.norm_p, "fat": user.norm_f, 
-            "carbs": user.norm_c, "sugar": user.norm_sugar, "salt": user.norm_salt
-        },
-        "foods": foods,
-        "water_ml": total_water
+        "user_norms": {"kcal": user.norm_kcal, "protein": user.norm_p, "fat": user.norm_f, "carbs": user.norm_c, "sugar": user.norm_sugar, "salt": user.norm_salt},
+        "foods": [{"id": f.id, "name": f.name, "kcal": f.kcal, "protein": f.protein, "fat": f.fat, "carbs": f.carbs, "sugar": f.sugar, "salt": f.salt} for f in foods],
+        "water_ml": sum([w.amount_ml for w in water])
     }
+
+@app.get("/api/progress/{tg_id}")
+def get_progress(tg_id: str):
+    db = SessionLocal()
+    end_date = date.today()
+    start_date = end_date - timedelta(days=6)
+    foods = db.query(FoodLog).filter(FoodLog.tg_id == tg_id, FoodLog.log_date >= start_date, FoodLog.log_date <= end_date).all()
+    
+    progress_data = {}
+    for i in range(7):
+        d = start_date + timedelta(days=i)
+        progress_data[d.strftime("%Y-%m-%d")] = 0
+        
+    for f in foods:
+        progress_data[f.log_date.strftime("%Y-%m-%d")] += f.kcal
+        
+    db.close()
+    return {"dates": list(progress_data.keys()), "kcal": list(progress_data.values())}
+
+# --- Ендпоінти: Додавання та видалення їжі ---
+def save_food_to_db(req_tg_id, req_date, food_data):
+    db = SessionLocal()
+    new_food = FoodLog(tg_id=req_tg_id, log_date=req_date, name=food_data['name'], kcal=food_data['kcal'], protein=food_data['protein'], fat=food_data['fat'], carbs=food_data['carbs'], sugar=food_data.get('sugar', 0), salt=food_data.get('salt', 0))
+    db.add(new_food); db.commit(); db.refresh(new_food); db.close()
+    return new_food.id
 
 @app.post("/api/food/text")
 def add_food_text(req: TextFoodRequest):
-    db = SessionLocal()
-    prompt = f"""
-    Analyze this food description: "{req.text}".
-    Return ONLY a valid JSON object with keys: name (string in Ukrainian), kcal, protein, fat, carbs, sugar, salt (all numbers). 
-    If weight isn't specified, assume standard portion. Do not include markdown formatting.
-    """
+    prompt = f"Analyze food: '{req.text}'. Return ONLY valid JSON: keys name(string in Ukrainian), kcal, protein, fat, carbs, sugar, salt (numbers). No markdown."
     response = model.generate_content(prompt)
-    try:
-        food_data = json.loads(response.text.strip('` \njson'))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to parse Gemini.")
-
-    new_food = FoodLog(
-        tg_id=req.tg_id, log_date=req.date,
-        name=food_data['name'], kcal=food_data['kcal'],
-        protein=food_data['protein'], fat=food_data['fat'],
-        carbs=food_data['carbs'], sugar=food_data.get('sugar', 0),
-        salt=food_data.get('salt', 0)
-    )
-    db.add(new_food)
-    db.commit()
-    db.close()
+    food_data = json.loads(response.text.strip('` \njson'))
+    save_food_to_db(req.tg_id, req.date, food_data)
     return {"status": "success", "food": food_data}
 
 @app.post("/api/food/photo")
 async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file: UploadFile = File(...)):
-    db = SessionLocal()
     contents = await file.read()
-    image_parts = [{"mime_type": file.content_type, "data": contents}]
-    prompt = "Analyze this food image. Return ONLY a valid JSON object with keys: name (string in Ukrainian), kcal, protein, fat, carbs, sugar, salt (all numbers). Assume a standard portion if scale is unclear. No markdown."
-    
-    response = model.generate_content([prompt, image_parts[0]])
+    response = model.generate_content(["Analyze food image. Return ONLY valid JSON: name(string in Ukrainian), kcal, protein, fat, carbs, sugar, salt(numbers). No markdown.", {"mime_type": file.content_type, "data": contents}])
+    food_data = json.loads(response.text.strip('` \njson'))
+    save_food_to_db(tg_id, date.fromisoformat(date_str), food_data)
+    return {"status": "success"}
+
+@app.post("/api/food/barcode")
+def add_food_barcode(req: BarcodeRequest):
+    prompt = f"User scanned a barcode: {req.barcode}. If you can guess the product, return its nutritional info. If unknown, return a generic 'Невідомий продукт зі штрихкодом' with 0 macros. Return ONLY valid JSON: name(string in Ukrainian), kcal, protein, fat, carbs, sugar, salt(numbers). No markdown."
+    response = model.generate_content(prompt)
     try:
         food_data = json.loads(response.text.strip('` \njson'))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to parse Gemini.")
-
-    new_food = FoodLog(
-        tg_id=tg_id, log_date=date.fromisoformat(date_str),
-        name=food_data['name'], kcal=food_data['kcal'],
-        protein=food_data['protein'], fat=food_data['fat'],
-        carbs=food_data['carbs'], sugar=food_data.get('sugar', 0),
-        salt=food_data.get('salt', 0)
-    )
-    db.add(new_food)
-    db.commit()
-    db.close()
+    except:
+        food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "sugar": 0, "salt": 0}
+    save_food_to_db(req.tg_id, req.date, food_data)
     return {"status": "success", "food": food_data}
+
+@app.delete("/api/food/{food_id}")
+def delete_food(food_id: int):
+    db = SessionLocal()
+    db.query(FoodLog).filter(FoodLog.id == food_id).delete()
+    db.commit(); db.close()
+    return {"status": "success"}
 
 @app.post("/api/water")
 def add_water(tg_id: str = Form(...), date_str: str = Form(...), amount: float = Form(...)):
     db = SessionLocal()
-    new_water = WaterLog(tg_id=tg_id, log_date=date.fromisoformat(date_str), amount_ml=amount)
-    db.add(new_water)
-    db.commit()
-    db.close()
+    db.add(WaterLog(tg_id=tg_id, log_date=date.fromisoformat(date_str), amount_ml=amount))
+    db.commit(); db.close()
     return {"status": "success"}
 
 @app.post("/api/chat")
 def ai_chat(req: ChatMessage):
-    prompt = f"Ти професійний дієтолог FitLio Pro. Користувач питає: {req.message}. Дай коротку, корисну відповідь українською мовою."
+    context = "\n".join([f"{msg['role']}: {msg['text']}" for msg in req.history[-6:]]) # Останні 6 повідомлень
+    prompt = f"Ти професійний дієтолог FitLio Pro. Контекст розмови:\n{context}\nКористувач каже: {req.message}. Дай коротку, дружню і корисну відповідь українською."
     response = model.generate_content(prompt)
     return {"reply": response.text}
 
