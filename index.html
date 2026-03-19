@@ -7,53 +7,49 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            /* Темна тема та акценти iOS */
-            --bg-color: #000000;
+            var(--bg-color): #000000;
             --card-bg: #1c1c1e;
             --text-main: #ffffff;
             --text-sec: #8e8e93;
-            --accent: #ffcc00; /* Жовтий преміум акцент */
-            --btn-bg: #32ade6; /* iOS синій */
+            --accent: #ffcc00;
+            --btn-bg: #32ade6;
             --water: #32ade6;
             --ring-kcal: #ffcc00;
             --ring-p: #34c759;
             --ring-f: #ff9500;
             --ring-c: #007aff;
+            --ring-sugar: #af52de;
+            --ring-salt: #ff2d55;
         }
 
         [data-theme="light"] {
             --bg-color: #f2f2f7;
             --card-bg: #ffffff;
             --text-main: #000000;
-            --text-sec: #8e8e93;
-            --accent: #007aff;
-            --btn-bg: #007aff;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 90px; transition: background-color 0.3s; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 90px; }
         
-        /* Header & Calendar */
         header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-color); position: sticky; top: 0; z-index: 10; border-bottom: 0.5px solid rgba(255,255,255,0.1); }
         .tg-header { display: flex; flex-direction: column; }
         .tg-title { font-size: 17px; font-weight: 600; }
         .tg-subtitle { font-size: 13px; color: var(--text-sec); }
         .header-actions { display: flex; gap: 10px; align-items: center; }
-        .premium-badge { background: var(--accent); color: white; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .premium-badge { background: var(--accent); color: #000; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
         
         .calendar { display: flex; align-items: center; gap: 15px; font-weight: 600; font-size: 17px; justify-content: center; padding: 10px; }
         .calendar button { background: none; border: none; font-size: 20px; color: var(--btn-bg); cursor: pointer; }
         .settings-btn { font-size: 24px; background: none; border: none; cursor: pointer; color: var(--text-main); }
 
-        /* Dashboard */
         .dashboard { padding: 20px; }
         .rings-wrapper { display: flex; flex-direction: column; align-items: center; gap: 20px; background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .main-ring-box { display: flex; gap: 20px; align-items: center; justify-content: center; width: 100%; }
-        .ring-box-label { font-size: 14px; color: var(--text-sec); text-align: center; }
         .main-ring { position: relative; width: 140px; height: 140px; }
-        .macros-rings { display: flex; justify-content: space-around; width: 100%; gap: 10px; flex-wrap: wrap; }
-        .small-ring-box { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
-        .small-ring { position: relative; width: 70px; height: 70px; }
+        
+        .macros-rings { display: flex; justify-content: center; width: 100%; gap: 12px; flex-wrap: wrap; }
+        .small-ring-box { display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 28%; }
+        .small-ring { position: relative; width: 65px; height: 65px; }
         
         svg { transform: rotate(-90deg); width: 100%; height: 100%; }
         circle { fill: none; stroke-width: 8; stroke-linecap: round; }
@@ -62,65 +58,50 @@
         .ring-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
         .main-ring .ring-text span { display: block; font-size: 28px; font-weight: 700; color: var(--accent); }
         .main-ring .ring-text small { font-size: 12px; color: var(--text-sec); }
-        .small-ring-box label { margin-top: 5px; font-size: 13px; font-weight: 500; color: var(--text-sec); }
-        .small-ring .ring-text { font-size: 14px; font-weight: 600; }
+        .small-ring-box label { margin-top: 5px; font-size: 12px; font-weight: 500; color: var(--text-sec); }
+        .small-ring .ring-text { font-size: 12px; font-weight: 600; }
         
         .food-quick-panel { display: flex; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; width: 100%; margin-top: 15px; gap: 10px; }
         .quick-btn { background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; flex: 1; text-align: center; padding: 10px; border-radius: 8px; transition: background 0.2s; }
-        .quick-btn:active { background: rgba(255,255,255,0.05); }
 
-        /* Meals (Раціон) - Категорії */
         .food-list { margin-top: 25px; padding: 0 20px; }
         .food-list h2 { font-size: 22px; margin-bottom: 15px; }
         .meal-categories-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
-        .meal-category-card { background: var(--card-bg); border-radius: 16px; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s; }
-        .meal-category-card:active { transform: scale(0.98); }
+        .meal-category-card { background: var(--card-bg); border-radius: 16px; padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .category-info { display: flex; flex-direction: column; }
         .category-name { font-size: 17px; font-weight: 600; }
         .category-kcal { font-size: 14px; color: var(--accent); margin-top: 2px; }
-        .category-actions { display: flex; gap: 8px; color: var(--text-sec); font-size: 20px; }
         
-        /* Питний режим (Вода) */
-        .water-card { margin-top: 15px; background: var(--card-bg); border-radius: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .water-card { margin-top: 15px; background: var(--card-bg); border-radius: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
         .water-info h3 { font-size: 17px; margin-bottom: 4px; color: var(--water); }
         .water-info p { color: var(--text-sec); font-size: 14px; }
         .add-water-btn { background: var(--water); color: white; border: none; border-radius: 50px; padding: 8px 16px; font-weight: 600; cursor: pointer; }
 
-        /* General Food List (Прийоми їжі) */
-        #food-container { margin-top: 10px; }
         .food-item { background: rgba(255,255,255,0.02); border-radius: 16px; padding: 15px; margin-bottom: 10px; border-bottom: 0.5px solid rgba(255,255,255,0.05); }
         .food-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 16px; margin-bottom: 5px; }
         .food-macros { font-size: 13px; color: var(--text-sec); display: flex; gap: 8px; flex-wrap: wrap; }
         .food-macros span { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
 
-        /* Modals */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 100; justify-content: center; align-items: flex-end; }
-        .modal-content { background: var(--card-bg); width: 100%; max-height: 90vh; border-radius: 20px 20px 0 0; padding: 20px; overflow-y: auto; animation: slideUp 0.3s ease-out; border-top: 0.5px solid rgba(255,255,255,0.1); }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-content { background: var(--card-bg); width: 100%; max-height: 90vh; border-radius: 20px 20px 0 0; padding: 20px; overflow-y: auto; border-top: 0.5px solid rgba(255,255,255,0.1); }
         .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 20px; font-weight: 700; color: var(--text-main); }
         .close-btn { background: rgba(255,255,255,0.05); border: none; width: 30px; height: 30px; border-radius: 15px; cursor: pointer; font-size: 16px; color: var(--text-sec); }
         
-        /* Forms */
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 14px; color: var(--text-sec); font-weight: 500; }
         input, select, textarea { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.05); color: var(--text-main); font-size: 16px; outline: none; }
-        .btn-primary { width: 100%; background: var(--accent); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 17px; font-weight: 600; margin-top: 10px; cursor: pointer; }
+        .btn-primary { width: 100%; background: var(--btn-bg); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 17px; font-weight: 600; margin-top: 10px; cursor: pointer; }
+        .btn-secondary { background: var(--accent); color: #000; }
 
-        /* Chat Modal Styles */
-        #chat-modal .modal-content { height: 80vh; display: flex; flex-direction: column; }
-        #chat-box { flex: 1; overflow-y: auto; margin-bottom: 15px; font-size: 15px; display: flex; flex-direction: column; gap: 10px; padding: 10px; }
-        
-        /* Floating Actions - Chat only */
         .fab-container { position: fixed; bottom: 100px; right: 20px; z-index: 5; }
         .fab { width: 56px; height: 56px; border-radius: 28px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; font-size: 24px; display: flex; justify-content: center; align-items: center; color: white; background: var(--btn-bg); }
 
-        /* TabBar (Нижня навігація) */
         .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 80px; background: var(--card-bg); border-top: 0.5px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; align-items: center; padding: 0 10px; padding-bottom: 15px; z-index: 10; }
-        .tab-item { display: flex; flex-direction: column; align-items: center; color: var(--text-sec); font-size: 11px; cursor: pointer; flex: 1; transition: color 0.2s; }
+        .tab-item { display: flex; flex-direction: column; align-items: center; color: var(--text-sec); font-size: 11px; cursor: pointer; flex: 1; }
         .tab-item.active { color: var(--accent); }
         .tab-item span { font-size: 24px; margin-bottom: 4px; }
-
-        /* Loader */
+        
+        .divider { height: 1px; background: rgba(255,255,255,0.1); margin: 25px 0; }
         .loader { display: none; text-align: center; padding: 20px; color: var(--accent); }
     </style>
 </head>
@@ -180,6 +161,20 @@
                     </div>
                     <label>Вугл.</label>
                 </div>
+                <div class="small-ring-box" onclick="showDrilldown('Цукор', 'sugar')">
+                    <div class="small-ring">
+                        <svg viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-sugar" cx="50" cy="50" r="40" stroke="var(--ring-sugar)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg>
+                        <div class="ring-text" id="text-sugar">0g</div>
+                    </div>
+                    <label>Цукор</label>
+                </div>
+                <div class="small-ring-box" onclick="showDrilldown('Сіль', 'salt')">
+                    <div class="small-ring">
+                        <svg viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-salt" cx="50" cy="50" r="40" stroke="var(--ring-salt)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg>
+                        <div class="ring-text" id="text-salt">0g</div>
+                    </div>
+                    <label>Сіль</label>
+                </div>
             </div>
             
             <div class="food-quick-panel">
@@ -193,9 +188,7 @@
 
     <div class="food-list">
         <h2>Раціон</h2>
-        
-        <div id="meal-categories" class="meal-categories-grid">
-            </div>
+        <div id="meal-categories" class="meal-categories-grid"></div>
 
         <div class="water-card">
             <div class="water-info">
@@ -224,13 +217,35 @@
     <div id="settings-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">Налаштування <button class="close-btn" onclick="closeModal('settings-modal')">✕</button></div>
+            
+            <h3 style="margin-bottom: 15px; color: var(--accent);">Розрахунок ШІ</h3>
             <div class="form-group"><label>Ціль</label><select id="st-goal"><option value="Схуднення">Схуднення</option><option value="Баланс">Баланс</option><option value="М'язи">М'язи</option></select></div>
-            <div class="form-group"><label>Вік</label><input type="number" id="st-age" placeholder="25"></div>
-            <div class="form-group"><label>Зріст (см)</label><input type="number" id="st-height" placeholder="175"></div>
-            <div class="form-group"><label>Поточна вага (кг)</label><input type="number" id="st-weight" placeholder="70"></div>
-            <div class="form-group"><label>Бажана вага (кг)</label><input type="number" id="st-target" placeholder="65"></div>
-            <button class="btn-primary" onclick="saveSettings()">Розрахувати норми через AI</button>
-            <div id="settings-loader" class="loader">Рахуємо...</div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>Вік</label><input type="number" id="st-age" placeholder="25"></div>
+                <div class="form-group" style="flex: 1;"><label>Зріст (см)</label><input type="number" id="st-height" placeholder="175"></div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>Вага (кг)</label><input type="number" id="st-weight" placeholder="70"></div>
+                <div class="form-group" style="flex: 1;"><label>Бажана (кг)</label><input type="number" id="st-target" placeholder="65"></div>
+            </div>
+            <button class="btn-primary" onclick="saveAISettings()">Авто-розрахунок ШІ</button>
+            <div id="settings-loader-ai" class="loader">Рахуємо...</div>
+            
+            <div class="divider"></div>
+            
+            <h3 style="margin-bottom: 15px; color: var(--btn-bg);">Власні норми (Вручну)</h3>
+            <div class="form-group"><label>Калорії (ккал)</label><input type="number" id="man-kcal"></div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>Білки (г)</label><input type="number" id="man-p"></div>
+                <div class="form-group" style="flex: 1;"><label>Жири (г)</label><input type="number" id="man-f"></div>
+                <div class="form-group" style="flex: 1;"><label>Вугл (г)</label><input type="number" id="man-c"></div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>Цукор (г)</label><input type="number" id="man-sugar"></div>
+                <div class="form-group" style="flex: 1;"><label>Сіль (г)</label><input type="number" id="man-salt"></div>
+            </div>
+            <button class="btn-primary btn-secondary" onclick="saveManualSettings()">Зберегти мої цифри</button>
+            <div id="settings-loader-man" class="loader">Зберігаємо...</div>
         </div>
     </div>
 
@@ -238,7 +253,7 @@
         <div class="modal-content">
             <div class="modal-header">Додати їжу <button class="close-btn" onclick="closeModal('add-food-modal')">✕</button></div>
             <div class="form-group">
-                <label>Опишіть страву (напр: Яєчня з 2 яєць і тост)</label>
+                <label>Опишіть страву</label>
                 <textarea id="food-text" rows="3"></textarea>
             </div>
             <button class="btn-primary" onclick="addFoodText()">Аналізувати текст</button>
@@ -247,7 +262,7 @@
                 <label>Завантажити фото</label>
                 <input type="file" id="food-photo" accept="image/*">
             </div>
-            <button class="btn-primary" style="background: var(--ring-f);" onclick="addFoodPhoto()">Аналізувати фото</button>
+            <button class="btn-primary btn-secondary" onclick="addFoodPhoto()">Аналізувати фото</button>
             <div id="food-loader" class="loader">Аналізуємо склад...</div>
         </div>
     </div>
@@ -260,9 +275,9 @@
     </div>
 
     <div id="chat-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="height: 80vh; display: flex; flex-direction: column;">
             <div class="modal-header">AI Дієтолог <button class="close-btn" onclick="closeModal('chat-modal')">✕</button></div>
-            <div id="chat-box"></div>
+            <div id="chat-box" style="flex: 1; overflow-y: auto; margin-bottom: 15px; font-size: 15px; display: flex; flex-direction: column; gap: 10px;"></div>
             <div style="display: flex; gap: 10px;">
                 <input type="text" id="chat-input" placeholder="Запитайте щось..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
                 <button class="btn-primary" style="width: auto; margin: 0; padding: 0 20px;" onclick="sendChatMessage()">➤</button>
@@ -271,13 +286,10 @@
     </div>
 
     <script>
-        // Твій актуальний бекенд на Railway
         const API_BASE = "https://fitness-app-production-b4a3.up.railway.app/api";
-        
         let tg = window.Telegram.WebApp;
         tg.expand();
         
-        // Теми оформлення - за замовчуванням темна, але адаптується
         if (tg.colorScheme === 'light') document.body.setAttribute('data-theme', 'light');
         else document.body.setAttribute('data-theme', 'dark');
         
@@ -285,11 +297,9 @@
         let currentDate = new Date();
         let currentFoods = [];
         
-        const mealsCategories = ['Сніданок', 'Перекус', 'Обід', 'Другий перекус', 'Вечеря', 'Третій перекус'];
+        const mealsCategories = ['Сніданок', 'Перекус', 'Обід', 'Другий перекус', 'Вечеря'];
 
-        function formatDate(d) {
-            return d.toISOString().split('T')[0];
-        }
+        function formatDate(d) { return d.toISOString().split('T')[0]; }
 
         function updateDateDisplay() {
             const today = new Date();
@@ -301,11 +311,7 @@
             fetchDailyData();
         }
 
-        function changeDate(days) {
-            currentDate.setDate(currentDate.getDate() + days);
-            updateDateDisplay();
-        }
-
+        function changeDate(days) { currentDate.setDate(currentDate.getDate() + days); updateDateDisplay(); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         
@@ -327,53 +333,47 @@
                 currentFoods = data.foods;
                 document.getElementById('water-current').innerText = data.water_ml;
                 
+                // Заповнюємо поля ручних налаштувань поточними даними
+                document.getElementById('man-kcal').value = Math.round(data.user_norms.kcal);
+                document.getElementById('man-p').value = Math.round(data.user_norms.protein);
+                document.getElementById('man-f').value = Math.round(data.user_norms.fat);
+                document.getElementById('man-c').value = Math.round(data.user_norms.carbs);
+                document.getElementById('man-sugar').value = Math.round(data.user_norms.sugar);
+                document.getElementById('man-salt').value = Math.round(data.user_norms.salt);
+
                 updateUI(data.user_norms, data.foods);
                 updateMealsCategories(data.foods);
             } catch (e) {
-                console.error("Error fetching data:", e);
+                console.error("Error:", e);
             }
         }
 
         function updateMealsCategories(foods) {
             const container = document.getElementById('meal-categories');
             container.innerHTML = '';
-            
-            // Ми не можемо відфільтрувати їжу за категоріями в БД, тому картки будуть кнопками
-            // І за замовчуванням ккал для категорії порожні, або ми можемо спробувати відфільтрувати за префіксом.
-            
             mealsCategories.forEach(category => {
                 let categoryKcal = 0;
                 let categoryPrefix = `[${category}]`;
-                
-                foods.forEach(f => {
-                    if (f.name.startsWith(categoryPrefix)) {
-                        categoryKcal += f.kcal;
-                    }
-                });
-
+                foods.forEach(f => { if (f.name.startsWith(categoryPrefix)) categoryKcal += f.kcal; });
                 container.innerHTML += `
                     <div class="meal-category-card" onclick="openFoodModal('[${category}]')">
                         <div class="category-info">
                             <span class="category-name">${category}</span>
                             <span class="category-kcal">${categoryKcal > 0 ? Math.round(categoryKcal) + ' ккал' : ''}</span>
                         </div>
-                        <div class="category-actions">
-                            <span>…</span><span>➕</span>
-                        </div>
+                        <div style="color: var(--text-sec); font-size: 20px;">➕</div>
                     </div>`;
             });
         }
 
         function updateUI(norms, foods) {
             let totals = { kcal: 0, protein: 0, fat: 0, carbs: 0, sugar: 0, salt: 0 };
-            
             const container = document.getElementById('food-container');
             container.innerHTML = '';
             
             foods.forEach(f => {
                 totals.kcal += f.kcal; totals.protein += f.protein; totals.fat += f.fat;
                 totals.carbs += f.carbs; totals.sugar += f.sugar; totals.salt += f.salt;
-                
                 container.innerHTML += `
                     <div class="food-item">
                         <div class="food-header"><span>${f.name}</span><span>${Math.round(f.kcal)} ккал</span></div>
@@ -385,24 +385,24 @@
             });
 
             document.getElementById('norm-kcal').innerText = Math.round(norms.kcal);
-            
             setRing('kcal', totals.kcal, norms.kcal, 283, true);
             setRing('p', totals.protein, norms.protein, 251);
             setRing('f', totals.fat, norms.fat, 251);
             setRing('c', totals.carbs, norms.carbs, 251);
+            setRing('sugar', totals.sugar, norms.sugar, 251);
+            setRing('salt', totals.salt, norms.salt, 251);
         }
 
         function setRing(id, current, max, circumference, isInt = false) {
             const val = isInt ? Math.round(current) : current.toFixed(1);
             document.getElementById(`text-${id}`).innerText = val + (isInt ? '' : 'g');
-            
             const percentage = Math.min(current / max, 1);
             const offset = circumference - (percentage * circumference);
             document.getElementById(`ring-${id}`).style.strokeDashoffset = offset;
         }
 
-        async function saveSettings() {
-            document.getElementById('settings-loader').style.display = 'block';
+        async function saveAISettings() {
+            document.getElementById('settings-loader-ai').style.display = 'block';
             const payload = {
                 tg_id: userId,
                 goal: document.getElementById('st-goal').value,
@@ -411,13 +411,29 @@
                 weight: parseFloat(document.getElementById('st-weight').value),
                 target_weight: parseFloat(document.getElementById('st-target').value)
             };
-            
             await fetch(`${API_BASE}/profile`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
             });
-            
-            document.getElementById('settings-loader').style.display = 'none';
+            document.getElementById('settings-loader-ai').style.display = 'none';
+            closeModal('settings-modal');
+            fetchDailyData();
+        }
+
+        async function saveManualSettings() {
+            document.getElementById('settings-loader-man').style.display = 'block';
+            const payload = {
+                tg_id: userId,
+                kcal: parseFloat(document.getElementById('man-kcal').value) || 2000,
+                protein: parseFloat(document.getElementById('man-p').value) || 100,
+                fat: parseFloat(document.getElementById('man-f').value) || 60,
+                carbs: parseFloat(document.getElementById('man-c').value) || 200,
+                sugar: parseFloat(document.getElementById('man-sugar').value) || 50,
+                salt: parseFloat(document.getElementById('man-salt').value) || 5
+            };
+            await fetch(`${API_BASE}/profile/manual`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            document.getElementById('settings-loader-man').style.display = 'none';
             closeModal('settings-modal');
             fetchDailyData();
         }
@@ -425,13 +441,11 @@
         async function addFoodText() {
             const text = document.getElementById('food-text').value;
             if (!text || text.trim() === '') return;
-            
             document.getElementById('food-loader').style.display = 'block';
             await fetch(`${API_BASE}/food/text`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), text: text })
             });
-            
             document.getElementById('food-text').value = '';
             document.getElementById('food-loader').style.display = 'none';
             closeModal('add-food-modal');
@@ -441,15 +455,12 @@
         async function addFoodPhoto() {
             const file = document.getElementById('food-photo').files[0];
             if (!file) return;
-
             document.getElementById('food-loader').style.display = 'block';
             const formData = new FormData();
             formData.append('tg_id', userId);
             formData.append('date_str', formatDate(currentDate));
             formData.append('file', file);
-
             await fetch(`${API_BASE}/food/photo`, { method: 'POST', body: formData });
-            
             document.getElementById('food-photo').value = '';
             document.getElementById('food-loader').style.display = 'none';
             closeModal('add-food-modal');
@@ -461,7 +472,6 @@
             formData.append('tg_id', userId);
             formData.append('date_str', formatDate(currentDate));
             formData.append('amount', 250);
-            
             await fetch(`${API_BASE}/water`, { method: 'POST', body: formData });
             fetchDailyData();
         }
@@ -470,17 +480,15 @@
             document.getElementById('drilldown-title').innerText = title;
             const list = document.getElementById('drilldown-list');
             list.innerHTML = '';
-            
             let filtered = currentFoods.filter(f => f[macroKey] > 0);
             if (filtered.length === 0) {
                 list.innerHTML = '<p style="color:var(--text-sec); text-align:center;">Немає записів за сьогодні.</p>';
             } else {
                 filtered.forEach(f => {
                     list.innerHTML += `
-                        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:15px;">
+                        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
                             <div style="display:flex; flex-direction:column;">
                                 <span style="font-weight:600; color:var(--text-main);">${f.name}</span>
-                                <span style="font-size:12px; color:var(--text-sec);">Б:${f.protein} Ж:${f.fat} В:${f.carbs} Ц:${f.sugar} С:${f.salt}</span>
                             </div>
                             <strong style="color:var(--accent);">${f[macroKey]} г</strong>
                         </div>`;
@@ -493,7 +501,6 @@
             const input = document.getElementById('chat-input');
             const msg = input.value;
             if (!msg || msg.trim() === '') return;
-            
             const box = document.getElementById('chat-box');
             box.innerHTML += `<div style="align-self: flex-end; background: var(--btn-bg); color: white; padding: 10px 14px; border-radius: 18px 18px 0 18px; max-width: 80%;">${msg}</div>`;
             input.value = '';
@@ -504,20 +511,12 @@
                 body: JSON.stringify({ tg_id: userId, message: msg })
             });
             const data = await res.json();
-            
             box.innerHTML += `<div style="align-self: flex-start; background: rgba(255,255,255,0.05); color: var(--text-main); padding: 10px 14px; border-radius: 18px 18px 18px 0; max-width: 80%;">${data.reply}</div>`;
             box.scrollTop = box.scrollHeight;
         }
         
-        function tabClick(tabId) {
-            // Це для демонстрації. Користувач хотів вигляд як на фото, але функціонал зберегти.
-            // Реальний функціонал буде тільки для додавання.
-            if(tabId !== 'pereglyad') {
-                tg.showAlert(`Функція ${tabId} буде доступна незабаром!`);
-            }
-        }
-
-        // Ініціалізація
+        function tabClick(tabId) { if(tabId !== 'pereglyad') tg.showAlert(`Функція буде доступна незабаром!`); }
+        
         updateDateDisplay();
     </script>
 </body>
