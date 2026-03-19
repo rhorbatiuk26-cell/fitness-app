@@ -11,7 +11,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, Date
 from sqlalchemy.orm import declarative_base, sessionmaker
 import google.generativeai as genai
 
-# --- 1. Налаштування директорії та БД (Volume Requirement) ---
+# --- Налаштування директорії та БД ---
 DATA_DIR = Path("/app/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "database.db"
@@ -21,7 +21,6 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# --- 2. Моделі бази даних ---
 class User(Base):
     __tablename__ = "users"
     tg_id = Column(String, primary_key=True, index=True)
@@ -59,7 +58,6 @@ class WaterLog(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# --- 3. Налаштування FastAPI та Gemini ---
 app = FastAPI(title="FitLio Pro API")
 
 app.add_middleware(
@@ -73,7 +71,7 @@ app.add_middleware(
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
 
-# --- 4. Pydantic Схеми ---
+# --- Схеми ---
 class ProfileData(BaseModel):
     tg_id: str
     goal: str
@@ -81,6 +79,15 @@ class ProfileData(BaseModel):
     target_weight: float
     height: float
     age: int
+
+class ManualNorms(BaseModel):
+    tg_id: str
+    kcal: float
+    protein: float
+    fat: float
+    carbs: float
+    sugar: float
+    salt: float
 
 class TextFoodRequest(BaseModel):
     tg_id: str
@@ -91,30 +98,20 @@ class ChatMessage(BaseModel):
     tg_id: str
     message: str
 
-# --- 5. Ендпоінти ---
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
+# --- Ендпоінти ---
 @app.post("/api/profile")
 def update_profile(data: ProfileData):
     db = SessionLocal()
-    
-    # Промпт для Gemini для розрахунку норм
     prompt = f"""
     Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}.
     Limits: Sugar strictly up to 50g, Salt strictly up to 5g.
-    Return ONLY a valid JSON object with keys: kcal, protein, fat, carbs, sugar, salt. Values must be numbers. Do not include markdown formatting like ```json.
+    Return ONLY a valid JSON object with keys: kcal, protein, fat, carbs, sugar, salt. Values must be numbers. Do not include markdown.
     """
     response = model.generate_content(prompt)
     try:
         norms = json.loads(response.text.strip('` \njson'))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to parse Gemini response for norms.")
+        raise HTTPException(status_code=500, detail="Failed to parse Gemini response.")
 
     user = db.query(User).filter(User.tg_id == data.tg_id).first()
     if not user:
@@ -136,6 +133,25 @@ def update_profile(data: ProfileData):
     db.commit()
     db.close()
     return {"status": "success", "norms": norms}
+
+@app.post("/api/profile/manual")
+def update_manual_norms(data: ManualNorms):
+    db = SessionLocal()
+    user = db.query(User).filter(User.tg_id == data.tg_id).first()
+    if not user:
+        user = User(tg_id=data.tg_id)
+        db.add(user)
+    
+    user.norm_kcal = data.kcal
+    user.norm_p = data.protein
+    user.norm_f = data.fat
+    user.norm_c = data.carbs
+    user.norm_sugar = data.sugar
+    user.norm_salt = data.salt
+    
+    db.commit()
+    db.close()
+    return {"status": "success"}
 
 @app.get("/api/daily/{tg_id}/{log_date}")
 def get_daily_data(tg_id: str, log_date: date):
@@ -172,7 +188,7 @@ def add_food_text(req: TextFoodRequest):
     try:
         food_data = json.loads(response.text.strip('` \njson'))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to parse Gemini response for food.")
+        raise HTTPException(status_code=500, detail="Failed to parse Gemini.")
 
     new_food = FoodLog(
         tg_id=req.tg_id, log_date=req.date,
@@ -190,7 +206,6 @@ def add_food_text(req: TextFoodRequest):
 async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file: UploadFile = File(...)):
     db = SessionLocal()
     contents = await file.read()
-    
     image_parts = [{"mime_type": file.content_type, "data": contents}]
     prompt = "Analyze this food image. Return ONLY a valid JSON object with keys: name (string in Ukrainian), kcal, protein, fat, carbs, sugar, salt (all numbers). Assume a standard portion if scale is unclear. No markdown."
     
@@ -198,7 +213,7 @@ async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file
     try:
         food_data = json.loads(response.text.strip('` \njson'))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to parse Gemini response.")
+        raise HTTPException(status_code=500, detail="Failed to parse Gemini.")
 
     new_food = FoodLog(
         tg_id=tg_id, log_date=date.fromisoformat(date_str),
