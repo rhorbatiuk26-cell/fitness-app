@@ -1,334 +1,286 @@
 import os
-import sqlite3
 import json
-from datetime import datetime, timedelta
 import requests
+from pathlib import Path
+from datetime import date, timedelta
+from typing import List, Optional, Dict
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, desc
+from sqlalchemy.orm import declarative_base, sessionmaker
 import google.generativeai as genai
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-2.5-flash')
-
-DB_PATH = "/app/data/database.db"
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 # --- МЕТАБОЛІЧНІ ЕКВІВАЛЕНТИ (MET) ДЛЯ ВПРАВ ---
 ACTIVITIES = {
-    "🏃‍♂️ Біг (швидкий)": 11.5,
-    "🏃‍♀️ Біг (повільний / підтюпцем)": 8.0,
-    "🚶‍♂️ Ходьба (швидка)": 4.3,
-    "🚶‍♀️ Ходьба (прогулянка)": 3.0,
-    "🏋️‍♂️ Силове тренування (зал)": 5.0,
-    "🦵 Присідання (інтенсивні)": 5.0,
-    "🚴‍♂️ Велосипед": 7.5,
-    "🏊‍♂️ Плавання": 6.0,
-    "🧘‍♀️ Йога / Пілатес": 2.5,
-    "🤸‍♂️ Домашнє тренування (HIIT)": 8.0,
-    "💃 Танці": 5.0,
-    "⚽️ Футбол / Баскетбол": 7.0,
-    "🥊 Бокс / Єдиноборства": 10.0
+    "🏃‍♂️ Біг (швидкий)": 11.5, "🏃‍♀️ Біг (повільний / підтюпцем)": 8.0,
+    "🚶‍♂️ Ходьба (швидка)": 4.3, "🚶‍♀️ Ходьба (прогулянка)": 3.0,
+    "🏋️‍♂️ Силове тренування (зал)": 5.0, "🦵 Присідання (інтенсивні)": 5.0,
+    "🚴‍♂️ Велосипед": 7.5, "🏊‍♂️ Плавання": 6.0, "🧘‍♀️ Йога / Пілатес": 2.5,
+    "🤸‍♂️ Домашнє тренування (HIIT)": 8.0, "💃 Танці": 5.0,
+    "⚽️ Футбол / Баскетбол": 7.0, "🥊 Бокс / Єдиноборства": 10.0
 }
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-                        tg_id TEXT PRIMARY KEY, goal TEXT, age INTEGER, height REAL, 
-                        weight REAL, target_weight REAL,
-                        kcal REAL, protein REAL, fat REAL, carbs REAL, sugar REAL, salt REAL
-                    )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS food_logs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        tg_id TEXT, date TEXT, name TEXT,
-                        kcal REAL, protein REAL, fat REAL, carbs REAL, sugar REAL, salt REAL
-                    )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS water_logs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id TEXT, date TEXT, amount INTEGER
-                    )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS exercise_logs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        tg_id TEXT, date TEXT, name TEXT, duration_min INTEGER, burned_kcal REAL
-                    )''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS weight_logs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        tg_id TEXT, date TEXT, weight REAL
-                    )''')
-    conn.commit()
-    conn.close()
+# --- Налаштування директорії та БД ---
+DATA_DIR = Path("/app/data")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DATA_DIR / "database.db"
 
-init_db()
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-# --- МОДЕЛІ ---
-class ProfileSetup(BaseModel):
-    tg_id: str; goal: str; age: int; height: float; weight: float; target_weight: float
+class User(Base):
+    __tablename__ = "users"
+    tg_id = Column(String, primary_key=True, index=True)
+    goal = Column(String)
+    weight = Column(Float)
+    target_weight = Column(Float)
+    height = Column(Float)
+    age = Column(Integer)
+    norm_kcal = Column(Float)
+    norm_p = Column(Float)
+    norm_f = Column(Float)
+    norm_c = Column(Float)
+    norm_sugar = Column(Float)
+    norm_salt = Column(Float)
 
-class ManualProfileSetup(BaseModel):
-    tg_id: str; kcal: float; protein: float; fat: float; carbs: float; sugar: float; salt: float
+class FoodLog(Base):
+    __tablename__ = "food_logs"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tg_id = Column(String, index=True)
+    log_date = Column(Date, index=True)
+    name = Column(String)
+    kcal = Column(Float)
+    protein = Column(Float)
+    fat = Column(Float)
+    carbs = Column(Float)
+    sugar = Column(Float)
+    salt = Column(Float)
 
-class FoodTextRequest(BaseModel):
-    tg_id: str; date: str; text: str
+class WaterLog(Base):
+    __tablename__ = "water_logs"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tg_id = Column(String, index=True)
+    log_date = Column(Date, index=True)
+    amount_ml = Column(Float)
 
-class BarcodeRequest(BaseModel):
-    tg_id: str; date: str; barcode: str
+class ExerciseLog(Base):
+    __tablename__ = "exercise_logs"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tg_id = Column(String, index=True)
+    log_date = Column(Date, index=True)
+    name = Column(String)
+    duration_min = Column(Integer)
+    burned_kcal = Column(Float)
 
-class DirectFoodRequest(BaseModel):
-    tg_id: str; date: str; food: dict
+class WeightLog(Base):
+    __tablename__ = "weight_logs"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tg_id = Column(String, index=True)
+    log_date = Column(Date, index=True)
+    weight = Column(Float)
 
-class ExerciseRequest(BaseModel):
-    tg_id: str; date: str; name: str; duration_min: int
+Base.metadata.create_all(bind=engine)
 
-class WeightRequest(BaseModel):
-    tg_id: str; date: str; weight: float
+app = FastAPI(title="FitLio Pro API")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-class ChatRequest(BaseModel):
-    tg_id: str; message: str; history: list
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel('gemini-2.5-flash')
 
-def parse_ai_json(text: str):
-    clean_text = text.replace("```json", "").replace("```", "").strip()
-    return json.loads(clean_text)
+# --- Схеми ---
+class ProfileData(BaseModel): tg_id: str; goal: str; weight: float; target_weight: float; height: float; age: int
+class ManualNorms(BaseModel): tg_id: str; kcal: float; protein: float; fat: float; carbs: float; sugar: float; salt: float
+class TextFoodRequest(BaseModel): tg_id: str; date: date; text: str
+class BarcodeRequest(BaseModel): tg_id: str; date: date; barcode: str
+class DirectFoodRequest(BaseModel): tg_id: str; date: date; food: dict
+class ExerciseRequest(BaseModel): tg_id: str; date: date; name: str; duration_min: int
+class WeightRequest(BaseModel): tg_id: str; date: date; weight: float
+class ChatMessage(BaseModel): tg_id: str; message: str; history: List[Dict[str, str]] = []
 
-# --- API ЕНДПОІНТИ ---
-
-@app.get("/api/daily/{tg_id}/{date}")
-async def get_daily_data(tg_id: str, date: str):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT kcal, protein, fat, carbs, weight FROM users WHERE tg_id=?", (tg_id,))
-    user_data = cursor.fetchone()
-    if not user_data:
-        conn.close()
-        return {"needs_setup": True}
-    
-    norms = {"kcal": user_data[0], "protein": user_data[1], "fat": user_data[2], "carbs": user_data[3]}
-    current_weight = user_data[4]
-    
-    cursor.execute("SELECT id, name, kcal FROM food_logs WHERE tg_id=? AND date=?", (tg_id, date))
-    foods = [{"id": r[0], "name": r[1], "kcal": r[2]} for r in cursor.fetchall()]
-    
-    cursor.execute("SELECT SUM(kcal) FROM food_logs WHERE tg_id=? AND date=?", (tg_id, date))
-    consumed_kcal = cursor.fetchone()[0] or 0
-
-    cursor.execute("SELECT SUM(amount) FROM water_logs WHERE tg_id=? AND date=?", (tg_id, date))
-    water = cursor.fetchone()[0] or 0
-
-    cursor.execute("SELECT id, name, duration_min, burned_kcal FROM exercise_logs WHERE tg_id=? AND date=?", (tg_id, date))
-    exercises = [{"id": r[0], "name": r[1], "duration": r[2], "burned": r[3]} for r in cursor.fetchall()]
-    
-    cursor.execute("SELECT SUM(burned_kcal) FROM exercise_logs WHERE tg_id=? AND date=?", (tg_id, date))
-    total_burned = cursor.fetchone()[0] or 0
-
-    conn.close()
-    return {
-        "needs_setup": False, 
-        "user_norms": norms, 
-        "current_weight": current_weight,
-        "consumed_kcal": consumed_kcal,
-        "foods": foods, 
-        "water_ml": water,
-        "exercises": exercises,
-        "total_burned_kcal": total_burned,
-        "activities_list": list(ACTIVITIES.keys())
-    }
-
+# --- Ендпоінти: Профіль та Норми ---
 @app.post("/api/profile")
-async def setup_profile_ai(req: ProfileSetup):
-    bmr = 10 * req.weight + 6.25 * req.height - 5 * req.age + 5 
-    if req.goal == "Схуднення": kcal = bmr * 1.2 - 400
-    elif req.goal == "М'язи": kcal = bmr * 1.55 + 300
-    else: kcal = bmr * 1.3
-    protein = (kcal * 0.3) / 4; fat = (kcal * 0.25) / 9; carbs = (kcal * 0.45) / 4
+def update_profile(data: ProfileData):
+    db = SessionLocal()
+    prompt = f"Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}. Limits: Sugar up to 50g, Salt up to 5g. Return ONLY a valid JSON with keys: kcal, protein, fat, carbs, sugar, salt."
+    try:
+        response = model.generate_content(prompt)
+        norms = json.loads(response.text.strip('` \njson'))
+    except:
+        norms = {"kcal": 2000, "protein": 100, "fat": 60, "carbs": 200, "sugar": 50, "salt": 5}
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''REPLACE INTO users (tg_id, goal, age, height, weight, target_weight, kcal, protein, fat, carbs, sugar, salt)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 50, 5)''',
-                   (req.tg_id, req.goal, req.age, req.height, req.weight, req.target_weight, kcal, protein, fat, carbs))
-    cursor.execute("INSERT INTO weight_logs (tg_id, date, weight) VALUES (?, ?, ?)", (req.tg_id, datetime.now().strftime("%Y-%m-%d"), req.weight))
-    conn.commit(); conn.close()
-    return {"status": "success"}
+    user = db.query(User).filter(User.tg_id == data.tg_id).first()
+    if not user: user = User(tg_id=data.tg_id); db.add(user)
+    
+    user.goal = data.goal; user.weight = data.weight; user.target_weight = data.target_weight; user.height = data.height; user.age = data.age
+    user.norm_kcal = norms.get('kcal', 2000); user.norm_p = norms.get('protein', 100); user.norm_f = norms.get('fat', 60); user.norm_c = norms.get('carbs', 200); user.norm_sugar = norms.get('sugar', 50); user.norm_salt = norms.get('salt', 5)
+    
+    # Автоматично зберігаємо першу вагу в історію
+    db.add(WeightLog(tg_id=data.tg_id, log_date=date.today(), weight=data.weight))
+    
+    db.commit(); db.close()
+    return {"status": "success", "norms": norms}
 
 @app.post("/api/profile/manual")
-async def setup_profile_manual(req: ManualProfileSetup):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''INSERT INTO users (tg_id, kcal, protein, fat, carbs, sugar, salt)
-                      VALUES (?, ?, ?, ?, ?, ?, ?)
-                      ON CONFLICT(tg_id) DO UPDATE SET
-                      kcal=excluded.kcal, protein=excluded.protein, fat=excluded.fat, carbs=excluded.carbs, sugar=excluded.sugar, salt=excluded.salt''',
-                   (req.tg_id, req.kcal, req.protein, req.fat, req.carbs, req.sugar, req.salt))
-    conn.commit()
-    conn.close()
+def update_manual_norms(data: ManualNorms):
+    db = SessionLocal()
+    user = db.query(User).filter(User.tg_id == data.tg_id).first()
+    if not user: user = User(tg_id=data.tg_id); db.add(user)
+    user.norm_kcal = data.kcal; user.norm_p = data.protein; user.norm_f = data.fat; user.norm_c = data.carbs; user.norm_sugar = data.sugar; user.norm_salt = data.salt
+    db.commit(); db.close()
     return {"status": "success"}
 
+# --- Ендпоінти: Дані та Прогрес ---
+@app.get("/api/daily/{tg_id}/{log_date}")
+def get_daily_data(tg_id: str, log_date: date):
+    db = SessionLocal()
+    user = db.query(User).filter(User.tg_id == tg_id).first()
+    if not user: return {"needs_setup": True}
+    
+    foods = db.query(FoodLog).filter(FoodLog.tg_id == tg_id, FoodLog.log_date == log_date).all()
+    water = db.query(WaterLog).filter(WaterLog.tg_id == tg_id, WaterLog.log_date == log_date).all()
+    exercises = db.query(ExerciseLog).filter(ExerciseLog.tg_id == tg_id, ExerciseLog.log_date == log_date).all()
+    
+    db.close()
+    return {
+        "needs_setup": False,
+        "user_norms": {"kcal": user.norm_kcal, "protein": user.norm_p, "fat": user.norm_f, "carbs": user.norm_c, "sugar": user.norm_sugar, "salt": user.norm_salt},
+        "current_weight": user.weight,
+        "foods": [{"id": f.id, "name": f.name, "kcal": f.kcal, "protein": f.protein, "fat": f.fat, "carbs": f.carbs, "sugar": f.sugar, "salt": f.salt} for f in foods],
+        "water_ml": sum([w.amount_ml for w in water]),
+        "exercises": [{"id": e.id, "name": e.name, "duration": e.duration_min, "burned": e.burned_kcal} for e in exercises],
+        "total_burned_kcal": sum([e.burned_kcal for e in exercises])
+    }
+
+@app.get("/api/progress/{tg_id}")
+def get_progress(tg_id: str):
+    db = SessionLocal()
+    end_date = date.today()
+    start_date = end_date - timedelta(days=6)
+    foods = db.query(FoodLog).filter(FoodLog.tg_id == tg_id, FoodLog.log_date >= start_date, FoodLog.log_date <= end_date).all()
+    progress_data = { (start_date + timedelta(days=i)).strftime("%Y-%m-%d"): 0 for i in range(7) }
+    for f in foods: progress_data[f.log_date.strftime("%Y-%m-%d")] += f.kcal
+    db.close()
+    return {"dates": list(progress_data.keys()), "kcal": list(progress_data.values())}
+
+@app.get("/api/foods/recent/{tg_id}")
+def get_recent_foods(tg_id: str):
+    db = SessionLocal()
+    foods = db.query(FoodLog).filter(FoodLog.tg_id == tg_id).order_by(desc(FoodLog.id)).limit(100).all()
+    unique_foods = {}
+    for f in foods:
+        clean_name = f.name.replace("[Сніданок] ", "").replace("[Обід] ", "").replace("[Вечеря] ", "").strip()
+        if clean_name not in unique_foods:
+            unique_foods[clean_name] = {"name": clean_name, "kcal": f.kcal, "protein": f.protein, "fat": f.fat, "carbs": f.carbs, "sugar": f.sugar, "salt": f.salt}
+    db.close()
+    return list(unique_foods.values())
+
+# --- Ендпоінти: Додавання та видалення їжі ---
+def save_food_to_db(req_tg_id, req_date, food_data):
+    db = SessionLocal()
+    new_food = FoodLog(tg_id=req_tg_id, log_date=req_date, name=food_data['name'], kcal=food_data['kcal'], protein=food_data['protein'], fat=food_data['fat'], carbs=food_data['carbs'], sugar=food_data.get('sugar', 0), salt=food_data.get('salt', 0))
+    db.add(new_food); db.commit(); db.refresh(new_food); db.close()
+    return new_food.id
+
+@app.post("/api/food/direct")
+def add_food_direct(req: DirectFoodRequest):
+    save_food_to_db(req.tg_id, req.date, req.food)
+    return {"status": "success"}
+
+@app.post("/api/food/text")
+def add_food_text(req: TextFoodRequest):
+    prompt = f"Analyze food: '{req.text}'. Return ONLY valid JSON: keys name(string in Ukrainian), kcal, protein, fat, carbs, sugar, salt (numbers). No markdown."
+    response = model.generate_content(prompt)
+    food_data = json.loads(response.text.strip('` \njson'))
+    save_food_to_db(req.tg_id, req.date, food_data)
+    return {"status": "success", "food": food_data}
+
+@app.post("/api/food/photo")
+async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file: UploadFile = File(...)):
+    contents = await file.read()
+    response = model.generate_content(["Analyze food image. Return ONLY valid JSON: name(string in Ukrainian), kcal, protein, fat, carbs, sugar, salt(numbers). No markdown.", {"mime_type": file.content_type, "data": contents}])
+    food_data = json.loads(response.text.strip('` \njson'))
+    save_food_to_db(tg_id, date.fromisoformat(date_str), food_data)
+    return {"status": "success", "data": food_data}
+
+@app.post("/api/food/barcode")
+def add_food_barcode(req: BarcodeRequest):
+    # 1. Спроба знайти в Open Food Facts
+    url = f"https://world.openfoodfacts.org/api/v0/product/{req.barcode}.json"
+    try:
+        resp = requests.get(url, timeout=5).json()
+        if resp.get("status") == 1:
+            product = resp["product"]
+            name = product.get("product_name_uk") or product.get("product_name_ru") or product.get("product_name") or "Невідомий продукт"
+            serving = float(product.get("serving_quantity", 100))
+            multiplier = serving / 100.0
+            nutriments = product.get("nutriments", {})
+            
+            kcal = float(nutriments.get("energy-kcal_100g", 0)) * multiplier
+            protein = float(nutriments.get("proteins_100g", 0)) * multiplier
+            fat = float(nutriments.get("fat_100g", 0)) * multiplier
+            carbs = float(nutriments.get("carbohydrates_100g", 0)) * multiplier
+            
+            food_data = {"name": f"📱 {name} ({int(serving)}г)", "kcal": kcal, "protein": protein, "fat": fat, "carbs": carbs, "sugar": 0, "salt": 0}
+            save_food_to_db(req.tg_id, req.date, food_data)
+            return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
+    except:
+        pass # Якщо база лежить, йдемо до ШІ (fallback)
+
+    # 2. Якщо не знайшли, використовуємо старий метод (ШІ вгадує)
+    prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. If unknown, return generic 'Невідомий продукт' with 0 macros. Return ONLY valid JSON: name(string in Ukrainian), kcal, protein, fat, carbs, sugar, salt(numbers). No markdown."
+    response = model.generate_content(prompt)
+    try: food_data = json.loads(response.text.strip('` \njson'))
+    except: food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "sugar": 0, "salt": 0}
+    save_food_to_db(req.tg_id, req.date, food_data)
+    return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
+
+@app.delete("/api/food/{food_id}")
+def delete_food(food_id: int):
+    db = SessionLocal()
+    db.query(FoodLog).filter(FoodLog.id == food_id).delete(); db.commit(); db.close()
+    return {"status": "success"}
+
+@app.post("/api/water")
+def add_water(tg_id: str = Form(...), date_str: str = Form(...), amount: float = Form(...)):
+    db = SessionLocal()
+    db.add(WaterLog(tg_id=tg_id, log_date=date.fromisoformat(date_str), amount_ml=amount)); db.commit(); db.close()
+    return {"status": "success"}
+
+# --- НОВІ ЕНДПОІНТИ: СПОРТ ТА ВАГА ---
 @app.post("/api/exercise")
-async def add_exercise(req: ExerciseRequest):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT weight FROM users WHERE tg_id=?", (req.tg_id,))
-    row = cursor.fetchone()
-    weight = row[0] if row else 70.0 
+def add_exercise(req: ExerciseRequest):
+    db = SessionLocal()
+    user = db.query(User).filter(User.tg_id == req.tg_id).first()
+    weight = user.weight if user and user.weight else 70.0
     
     met = ACTIVITIES.get(req.name, 5.0)
     burned_kcal = met * weight * (req.duration_min / 60.0)
     
-    cursor.execute('''INSERT INTO exercise_logs (tg_id, date, name, duration_min, burned_kcal)
-                      VALUES (?, ?, ?, ?, ?)''', (req.tg_id, req.date, req.name, req.duration_min, burned_kcal))
-    conn.commit(); conn.close()
-    return {"status": "success", "burned_kcal": round(burned_kcal)}
+    db.add(ExerciseLog(tg_id=req.tg_id, log_date=req.date, name=req.name, duration_min=req.duration_min, burned_kcal=burned_kcal))
+    db.commit(); db.close()
+    return {"status": "success", "burned_kcal": burned_kcal}
 
 @app.post("/api/weight")
-async def update_weight(req: WeightRequest):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO weight_logs (tg_id, date, weight) VALUES (?, ?, ?)", (req.tg_id, req.date, req.weight))
-    cursor.execute("UPDATE users SET weight=? WHERE tg_id=?", (req.weight, req.tg_id))
-    conn.commit(); conn.close()
-    return {"status": "success"}
-
-@app.post("/api/food/barcode")
-async def add_food_barcode(req: BarcodeRequest):
-    url = f"https://world.openfoodfacts.org/api/v0/product/{req.barcode}.json"
-    try:
-        resp = requests.get(url, timeout=5).json()
-        if resp.get("status") != 1: return {"status": "error", "message": "Продукт не знайдено"}
-        product = resp["product"]
-        name = product.get("product_name_uk") or product.get("product_name_ru") or product.get("product_name") or "Невідомий продукт"
-        serving = float(product.get("serving_quantity", 100))
-        multiplier = serving / 100.0
-        nutriments = product.get("nutriments", {})
-        
-        kcal = float(nutriments.get("energy-kcal_100g", 0)) * multiplier
-        protein = float(nutriments.get("proteins_100g", 0)) * multiplier
-        fat = float(nutriments.get("fat_100g", 0)) * multiplier
-        carbs = float(nutriments.get("carbohydrates_100g", 0)) * multiplier
-
-        final_name = f"📱 {name} ({int(serving)}г)"
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute('''INSERT INTO food_logs (tg_id, date, name, kcal, protein, fat, carbs, sugar, salt)
-                          VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)''', (req.tg_id, req.date, final_name, kcal, protein, fat, carbs))
-        conn.commit(); conn.close()
-        return {"status": "success", "name": final_name, "kcal": round(kcal)}
-    except Exception as e:
-        return {"status": "error", "message": "Помилка зв'язку"}
-
-@app.post("/api/food/text")
-async def add_food_text(req: FoodTextRequest):
-    prompt = f"З'їдено: '{req.text}'. Визнач калорії та БЖВ. Поверни ТІЛЬКИ JSON: {{\"name\": \"Назва\", \"kcal\": 0, \"protein\": 0, \"fat\": 0, \"carbs\": 0, \"sugar\": 0, \"salt\": 0}}"
-    response = model.generate_content(prompt)
-    data = parse_ai_json(response.text)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''INSERT INTO food_logs (tg_id, date, name, kcal, protein, fat, carbs, sugar, salt)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', (req.tg_id, req.date, data['name'], data['kcal'], data['protein'], data['fat'], data['carbs'], data['sugar'], data['salt']))
-    conn.commit(); conn.close()
-    return {"status": "success", "data": data}
-
-@app.post("/api/food/photo")
-async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file: UploadFile = File(...)):
-    import PIL.Image
-    import io
-    image_data = await file.read()
-    image = PIL.Image.open(io.BytesIO(image_data))
+def update_weight(req: WeightRequest):
+    db = SessionLocal()
+    user = db.query(User).filter(User.tg_id == req.tg_id).first()
+    if user: user.weight = req.weight
     
-    prompt = """Проаналізуй страву на фото. Оціни вагу, калорії, БЖВ. 
-    Поверни ТІЛЬКИ JSON: {"name": "Назва", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "sugar": 0, "salt": 0}"""
-    response = model.generate_content([prompt, image])
-    data = parse_ai_json(response.text)
-    
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''INSERT INTO food_logs (tg_id, date, name, kcal, protein, fat, carbs, sugar, salt)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                   (tg_id, date_str, data['name'], data['kcal'], data['protein'], data['fat'], data['carbs'], data['sugar'], data['salt']))
-    conn.commit()
-    conn.close()
-    return {"status": "success", "data": data}
-
-@app.post("/api/food/direct")
-async def add_direct_food(req: DirectFoodRequest):
-    f = req.food
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''INSERT INTO food_logs (tg_id, date, name, kcal, protein, fat, carbs, sugar, salt)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                   (req.tg_id, req.date, f['name'], f['kcal'], f['protein'], f['fat'], f['carbs'], f.get('sugar',0), f.get('salt',0)))
-    conn.commit()
-    conn.close()
+    db.add(WeightLog(tg_id=req.tg_id, log_date=req.date, weight=req.weight))
+    db.commit(); db.close()
     return {"status": "success"}
-
-@app.post("/api/water")
-async def add_water(tg_id: str = Form(...), date_str: str = Form(...), amount: int = Form(...)):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO water_logs (tg_id, date, amount) VALUES (?, ?, ?)", (tg_id, date_str, amount))
-    conn.commit()
-    conn.close()
-    return {"status": "success"}
-
-@app.delete("/api/food/{food_id}")
-async def delete_food(food_id: int):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM food_logs WHERE id=?", (food_id,))
-    conn.commit()
-    conn.close()
-    return {"status": "success"}
-
-@app.get("/api/progress/{tg_id}")
-async def get_progress(tg_id: str):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    dates = []
-    kcal_data = []
-    today = datetime.now()
-    for i in range(6, -1, -1):
-        d = (today - timedelta(days=i)).strftime("%Y-%m-%d")
-        cursor.execute("SELECT SUM(kcal) FROM food_logs WHERE tg_id=? AND date=?", (tg_id, d))
-        total = cursor.fetchone()[0] or 0
-        dates.append(d)
-        kcal_data.append(total)
-    conn.close()
-    return {"dates": dates, "kcal": kcal_data}
-
-@app.get("/api/foods/recent/{tg_id}")
-async def get_recent_foods(tg_id: str):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''SELECT name, kcal, protein, fat, carbs, sugar, salt 
-                      FROM food_logs WHERE tg_id=? 
-                      GROUP BY name ORDER BY id DESC LIMIT 15''', (tg_id,))
-    foods = [{"name": r[0], "kcal": r[1], "protein": r[2], "fat": r[3], "carbs": r[4], "sugar": r[5], "salt": r[6]} for r in cursor.fetchall()]
-    conn.close()
-    return foods
 
 @app.post("/api/chat")
-async def chat_with_ai(req: ChatRequest):
-    messages = [{"role": "user", "parts": ["Ти крутий фітнес-наставник і дієтолог. Відповідай коротко, підтримуй користувача, українською мовою."]}]
-    for msg in req.history[-5:]:
-        role = "user" if msg["role"] == "user" else "model"
-        messages.append({"role": role, "parts": [msg["text"]]})
-    messages.append({"role": "user", "parts": [req.message]})
-    
-    try:
-        response = model.generate_content(messages)
-        return {"reply": response.text}
-    except Exception as e:
-        return {"reply": "Зараз я трохи завантажений аналізом страв. Спробуй написати мені через хвилинку! 💪"}
+def ai_chat(req: ChatMessage):
+    context = "\n".join([f"{msg['role']}: {msg['text']}" for msg in req.history[-6:]])
+    prompt = f"Ти професійний дієтолог FitLio. Контекст розмови:\n{context}\nКористувач каже: {req.message}. Дай коротку і корисну відповідь українською."
+    response = model.generate_content(prompt)
+    return {"reply": response.text}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
