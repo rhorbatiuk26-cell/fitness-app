@@ -114,7 +114,7 @@
         .fab { width: 60px; height: 60px; border-radius: 30px; border: none; box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4); cursor: pointer; display: flex; justify-content: center; align-items: center; background: var(--btn-bg); }
         .fab svg { width: 28px; height: 28px; stroke: white; fill: none; stroke-width: 2; }
 
-        /* TabBar (ОНОВЛЕНО на 5 кнопок) */
+        /* TabBar */
         .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 85px; background: var(--card-bg); border-top: 0.5px solid rgba(142,142,147,0.15); display: flex; justify-content: space-around; align-items: center; padding: 0 5px 20px 5px; z-index: 10; }
         .tab-item { display: flex; flex-direction: column; align-items: center; color: var(--text-sec); font-size: 11px; font-weight: 500; cursor: pointer; flex: 1; transition: color 0.2s; margin-top: 10px;}
         .tab-item.active { color: var(--accent); }
@@ -364,7 +364,7 @@
         let chatHistory = [];
         let chartInstance = null;
         let cachedRecentFoods = null;
-        let html5QrcodeScanner = null; // Змінна для нашого нового сканера
+        let html5QrcodeScanner = null;
 
         function showToast(msg) {
             const toast = document.createElement('div');
@@ -446,23 +446,26 @@
             
             let hasItems = false;
 
+            // ВІДМАЛЬОВКА ТРЕНУВАНЬ (З КНОПКОЮ ВИДАЛЕННЯ)
             if (data && data.exercises && data.exercises.length > 0) {
                 hasItems = true;
                 data.exercises.forEach(e => {
                     container.innerHTML += `
-                        <div class="food-item" style="border-left: 4px solid var(--ring-p);">
+                        <div class="food-item" style="border-left: 4px solid var(--ring-p); position: relative;">
                             <div class="food-header"><span>🏋️ ${e.name} (${e.duration} хв)</span><span style="color:var(--ring-p);">- ${Math.round(e.burned)} ккал</span></div>
+                            <button class="delete-btn" onclick="deleteExercise(${e.id})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                         </div>`;
                 });
             }
 
+            // ВІДМАЛЬОВКА ЇЖІ
             if (foods && foods.length > 0) {
                 hasItems = true;
                 foods.forEach(f => {
                     totals.kcal += f.kcal; totals.protein += f.protein; totals.fat += f.fat;
                     totals.carbs += f.carbs; totals.sugar += f.sugar; totals.salt += f.salt;
                     container.innerHTML += `
-                        <div class="food-item">
+                        <div class="food-item" style="position: relative;">
                             <div class="food-header"><span>${f.name}</span><span style="color:var(--accent);">${Math.round(f.kcal)} ккал</span></div>
                             <div class="food-macros"><span>Б: ${Math.round(f.protein)}г</span> <span>Ж: ${Math.round(f.fat)}г</span> <span>В: ${Math.round(f.carbs)}г</span></div>
                             <button class="delete-btn" onclick="deleteFood(${f.id})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
@@ -540,12 +543,19 @@
             fetchDailyData();
         }
 
-        // --- НОВИЙ КАСТОМНИЙ СКАНЕР ШТРИХКОДІВ ---
+        // --- ВИДАЛЕННЯ ТРЕНУВАННЯ ---
+        async function deleteExercise(id) {
+            if(confirm("Видалити це тренування?")) {
+                await fetch(`${API_BASE}/exercise/${id}`, { method: 'DELETE' });
+                showToast("Тренування видалено!"); 
+                fetchDailyData(); 
+            }
+        }
+
         function openCustomScanner() {
             closeModal('add-food-modal');
             openModal('scanner-modal');
 
-            // При першому запуску браузер попросить доступ до камери!
             if (!html5QrcodeScanner) {
                 html5QrcodeScanner = new Html5Qrcode("reader");
             }
@@ -553,10 +563,9 @@
             const config = { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 };
             
             html5QrcodeScanner.start(
-                { facingMode: "environment" }, // Використовуємо задню камеру
+                { facingMode: "environment" },
                 config,
                 async (decodedText, decodedResult) => {
-                    // КОЛИ ШТРИХКОД ЗНАЙДЕНО
                     html5QrcodeScanner.stop().then(async () => {
                         closeModal('scanner-modal');
                         openModal('add-food-modal');
@@ -586,9 +595,7 @@
                         }
                     });
                 },
-                (errorMessage) => {
-                    // Сюди падають помилки типу "штрихкод не знайдено в поточному кадрі", ми їх ігноруємо
-                }
+                (errorMessage) => { }
             ).catch((err) => {
                 showToast("Немає доступу до камери! Надайте дозвіл.");
                 closeScanner();
