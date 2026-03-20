@@ -74,12 +74,23 @@
         .add-water-btn { background: rgba(50, 173, 230, 0.15); color: var(--water); border: none; border-radius: 50px; padding: 10px 18px; font-weight: 700; cursor: pointer; }
 
         .section-title { font-size: 20px; margin-bottom: 12px; font-weight: 700; }
-        .food-item { background: var(--card-bg); border-radius: 18px; padding: 16px; margin-bottom: 12px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .food-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 17px; margin-bottom: 8px; padding-right: 35px; }
+        
+        /* АНІМАЦІЯ ДЛЯ ДОВГОГО НАТИСКАННЯ */
+        .food-item { 
+            background: var(--card-bg); border-radius: 18px; padding: 16px; 
+            margin-bottom: 12px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            user-select: none; -webkit-user-select: none; 
+            cursor: pointer;
+        }
+        .food-item.pressing {
+            transform: scale(0.95);
+            background-color: rgba(255, 59, 48, 0.08); 
+        }
+
+        .food-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 17px; margin-bottom: 8px; }
         .food-macros { font-size: 13px; color: var(--text-sec); display: flex; gap: 6px; flex-wrap: wrap; }
         .food-macros span { background: rgba(142,142,147,0.1); padding: 4px 8px; border-radius: 6px; color: var(--text-main); font-weight: 500; }
-        .delete-btn { position: absolute; top: 16px; right: 16px; background: rgba(255, 59, 48, 0.1); border: none; cursor: pointer; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
-        .delete-btn svg { width: 16px; height: 16px; stroke: var(--danger); fill: none; stroke-width: 2; }
 
         /* Progress & Meals Views */
         .generic-container { padding: 20px; }
@@ -207,6 +218,7 @@
             </div>
 
             <h3 class="section-title">Прийоми їжі та Активність</h3>
+            <p style="color: var(--text-sec); font-size: 13px; margin-top: -8px; margin-bottom: 15px;">💡 Затисніть картку на секунду, щоб видалити</p>
             <div id="food-container"></div>
         </div>
     </div>
@@ -350,6 +362,7 @@
     </div>
 
     <script>
+        // ВАЖЛИВО: Переконайся, що тут твоя адреса з Railway
         const API_BASE = "https://fitness-app-production-b4a3.up.railway.app/api";
         
         let tg = window.Telegram.WebApp;
@@ -446,29 +459,31 @@
             
             let hasItems = false;
 
-            // ВІДМАЛЬОВКА ТРЕНУВАНЬ (З КНОПКОЮ ВИДАЛЕННЯ)
+            // ВІДМАЛЬОВКА ТРЕНУВАНЬ (Із подіями затискання)
             if (data && data.exercises && data.exercises.length > 0) {
                 hasItems = true;
                 data.exercises.forEach(e => {
                     container.innerHTML += `
-                        <div class="food-item" style="border-left: 4px solid var(--ring-p); position: relative;">
+                        <div class="food-item" style="border-left: 4px solid var(--ring-p);"
+                             ontouchstart="startPress(this, ${e.id}, 'exercise')" ontouchend="cancelPress(this)" ontouchmove="cancelPress(this)"
+                             onmousedown="startPress(this, ${e.id}, 'exercise')" onmouseup="cancelPress(this)" onmouseleave="cancelPress(this)">
                             <div class="food-header"><span>🏋️ ${e.name} (${e.duration} хв)</span><span style="color:var(--ring-p);">- ${Math.round(e.burned)} ккал</span></div>
-                            <button class="delete-btn" onclick="deleteExercise(${e.id})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                         </div>`;
                 });
             }
 
-            // ВІДМАЛЬОВКА ЇЖІ
+            // ВІДМАЛЬОВКА ЇЖІ (Із подіями затискання)
             if (foods && foods.length > 0) {
                 hasItems = true;
                 foods.forEach(f => {
                     totals.kcal += f.kcal; totals.protein += f.protein; totals.fat += f.fat;
                     totals.carbs += f.carbs; totals.sugar += f.sugar; totals.salt += f.salt;
                     container.innerHTML += `
-                        <div class="food-item" style="position: relative;">
+                        <div class="food-item"
+                             ontouchstart="startPress(this, ${f.id}, 'food')" ontouchend="cancelPress(this)" ontouchmove="cancelPress(this)"
+                             onmousedown="startPress(this, ${f.id}, 'food')" onmouseup="cancelPress(this)" onmouseleave="cancelPress(this)">
                             <div class="food-header"><span>${f.name}</span><span style="color:var(--accent);">${Math.round(f.kcal)} ккал</span></div>
                             <div class="food-macros"><span>Б: ${Math.round(f.protein)}г</span> <span>Ж: ${Math.round(f.fat)}г</span> <span>В: ${Math.round(f.carbs)}г</span></div>
-                            <button class="delete-btn" onclick="deleteFood(${f.id})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                         </div>`;
                 });
             }
@@ -486,6 +501,23 @@
             setRing('c', totals.carbs, norms.carbs, 251); 
             setRing('sugar', totals.sugar, norms.sugar, 251); 
             setRing('salt', totals.salt, norms.salt, 251);
+        }
+
+        // --- ЛОГІКА ДОВГОГО НАТИСКАННЯ ---
+        let pressTimer;
+        function startPress(element, id, type) {
+            element.classList.add('pressing');
+            pressTimer = setTimeout(() => {
+                tg.HapticFeedback.notificationOccurred('warning');
+                element.classList.remove('pressing');
+                if (type === 'food') deleteFood(id);
+                else deleteExercise(id);
+            }, 600); // Час затискання в мілісекундах
+        }
+
+        function cancelPress(element) {
+            clearTimeout(pressTimer);
+            element.classList.remove('pressing');
         }
 
         function setRing(id, current, max, circumference) {
@@ -541,15 +573,6 @@
             closeModal('add-sport-modal');
             showToast("Тренування додано! 🔥");
             fetchDailyData();
-        }
-
-        // --- ВИДАЛЕННЯ ТРЕНУВАННЯ ---
-        async function deleteExercise(id) {
-            if(confirm("Видалити це тренування?")) {
-                await fetch(`${API_BASE}/exercise/${id}`, { method: 'DELETE' });
-                showToast("Тренування видалено!"); 
-                fetchDailyData(); 
-            }
         }
 
         function openCustomScanner() {
@@ -613,6 +636,13 @@
             if(confirm("Видалити цей запис?")) {
                 await fetch(`${API_BASE}/food/${id}`, { method: 'DELETE' });
                 showToast("Видалено!"); fetchDailyData(); cachedRecentFoods = null;
+            }
+        }
+
+        async function deleteExercise(id) {
+            if(confirm("Видалити це тренування?")) {
+                await fetch(`${API_BASE}/exercise/${id}`, { method: 'DELETE' });
+                showToast("Тренування видалено!"); fetchDailyData(); 
             }
         }
 
