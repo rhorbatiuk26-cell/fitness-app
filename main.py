@@ -65,27 +65,12 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 # --- Схеми ---
-class ProfileData(BaseModel):
-    tg_id: str
-    goal: str
-    weight: float
-    target_weight: float
-    height: float
-    age: int
-
-class ManualNorms(BaseModel):
-    tg_id: str
-    kcal: float; protein: float; fat: float; carbs: float; sugar: float; salt: float
-
-class TextFoodRequest(BaseModel):
-    tg_id: str; date: date; text: str
-
-class BarcodeRequest(BaseModel):
-    tg_id: str; date: date; barcode: str
-
-class ChatMessage(BaseModel):
-    tg_id: str; message: str
-    history: List[Dict[str, str]] = [] # [{'role': 'user', 'text': '...'}, {'role': 'assistant', 'text': '...'}]
+class ProfileData(BaseModel): tg_id: str; goal: str; weight: float; target_weight: float; height: float; age: int
+class ManualNorms(BaseModel): tg_id: str; kcal: float; protein: float; fat: float; carbs: float; sugar: float; salt: float
+class TextFoodRequest(BaseModel): tg_id: str; date: date; text: str
+class BarcodeRequest(BaseModel): tg_id: str; date: date; barcode: str
+class DirectFoodRequest(BaseModel): tg_id: str; date: date; food: dict
+class ChatMessage(BaseModel): tg_id: str; message: str; history: List[Dict[str, str]] = []
 
 # --- Ендпоінти: Профіль та Норми ---
 @app.post("/api/profile")
@@ -99,9 +84,7 @@ def update_profile(data: ProfileData):
         norms = {"kcal": 2000, "protein": 100, "fat": 60, "carbs": 200, "sugar": 50, "salt": 5}
 
     user = db.query(User).filter(User.tg_id == data.tg_id).first()
-    if not user:
-        user = User(tg_id=data.tg_id)
-        db.add(user)
+    if not user: user = User(tg_id=data.tg_id); db.add(user)
     
     user.goal = data.goal; user.weight = data.weight; user.target_weight = data.target_weight; user.height = data.height; user.age = data.age
     user.norm_kcal = norms.get('kcal', 2000); user.norm_p = norms.get('protein', 100); user.norm_f = norms.get('fat', 60); user.norm_c = norms.get('carbs', 200); user.norm_sugar = norms.get('sugar', 50); user.norm_salt = norms.get('salt', 5)
@@ -117,13 +100,12 @@ def update_manual_norms(data: ManualNorms):
     db.commit(); db.close()
     return {"status": "success"}
 
-# --- Ендпоінти: Дані ---
+# --- Ендпоінти: Дані та Прогрес ---
 @app.get("/api/daily/{tg_id}/{log_date}")
 def get_daily_data(tg_id: str, log_date: date):
     db = SessionLocal()
     user = db.query(User).filter(User.tg_id == tg_id).first()
     if not user: return {"needs_setup": True}
-    
     foods = db.query(FoodLog).filter(FoodLog.tg_id == tg_id, FoodLog.log_date == log_date).all()
     water = db.query(WaterLog).filter(WaterLog.tg_id == tg_id, WaterLog.log_date == log_date).all()
     db.close()
@@ -140,17 +122,23 @@ def get_progress(tg_id: str):
     end_date = date.today()
     start_date = end_date - timedelta(days=6)
     foods = db.query(FoodLog).filter(FoodLog.tg_id == tg_id, FoodLog.log_date >= start_date, FoodLog.log_date <= end_date).all()
-    
-    progress_data = {}
-    for i in range(7):
-        d = start_date + timedelta(days=i)
-        progress_data[d.strftime("%Y-%m-%d")] = 0
-        
-    for f in foods:
-        progress_data[f.log_date.strftime("%Y-%m-%d")] += f.kcal
-        
+    progress_data = { (start_date + timedelta(days=i)).strftime("%Y-%m-%d"): 0 for i in range(7) }
+    for f in foods: progress_data[f.log_date.strftime("%Y-%m-%d")] += f.kcal
     db.close()
     return {"dates": list(progress_data.keys()), "kcal": list(progress_data.values())}
+
+@app.get("/api/foods/recent/{tg_id}")
+def get_recent_foods(tg_id: str):
+    db = SessionLocal()
+    # Отримуємо останні 100 записів їжі користувача
+    foods = db.query(FoodLog).filter(FoodLog.tg_id == tg_id).order_by(desc(FoodLog.id)).limit(100).all()
+    unique_foods = {}
+    for f in foods:
+        clean_name = f.name.replace("[Сніданок] ", "").replace("[Обід] ", "").replace("[Вечеря] ", "").strip()
+        if clean_name not in unique_foods:
+            unique_foods[clean_name] = {"name": clean_name, "kcal": f.kcal, "protein": f.protein, "fat": f.fat, "carbs": f.carbs, "sugar": f.sugar, "salt": f.salt}
+    db.close()
+    return list(unique_foods.values())
 
 # --- Ендпоінти: Додавання та видалення їжі ---
 def save_food_to_db(req_tg_id, req_date, food_data):
@@ -158,6 +146,11 @@ def save_food_to_db(req_tg_id, req_date, food_data):
     new_food = FoodLog(tg_id=req_tg_id, log_date=req_date, name=food_data['name'], kcal=food_data['kcal'], protein=food_data['protein'], fat=food_data['fat'], carbs=food_data['carbs'], sugar=food_data.get('sugar', 0), salt=food_data.get('salt', 0))
     db.add(new_food); db.commit(); db.refresh(new_food); db.close()
     return new_food.id
+
+@app.post("/api/food/direct")
+def add_food_direct(req: DirectFoodRequest):
+    save_food_to_db(req.tg_id, req.date, req.food)
+    return {"status": "success"}
 
 @app.post("/api/food/text")
 def add_food_text(req: TextFoodRequest):
@@ -177,33 +170,29 @@ async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file
 
 @app.post("/api/food/barcode")
 def add_food_barcode(req: BarcodeRequest):
-    prompt = f"User scanned a barcode: {req.barcode}. If you can guess the product, return its nutritional info. If unknown, return a generic 'Невідомий продукт зі штрихкодом' with 0 macros. Return ONLY valid JSON: name(string in Ukrainian), kcal, protein, fat, carbs, sugar, salt(numbers). No markdown."
+    prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. If unknown, return generic 'Невідомий продукт' with 0 macros. Return ONLY valid JSON: name(string in Ukrainian), kcal, protein, fat, carbs, sugar, salt(numbers). No markdown."
     response = model.generate_content(prompt)
-    try:
-        food_data = json.loads(response.text.strip('` \njson'))
-    except:
-        food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "sugar": 0, "salt": 0}
+    try: food_data = json.loads(response.text.strip('` \njson'))
+    except: food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "sugar": 0, "salt": 0}
     save_food_to_db(req.tg_id, req.date, food_data)
     return {"status": "success", "food": food_data}
 
 @app.delete("/api/food/{food_id}")
 def delete_food(food_id: int):
     db = SessionLocal()
-    db.query(FoodLog).filter(FoodLog.id == food_id).delete()
-    db.commit(); db.close()
+    db.query(FoodLog).filter(FoodLog.id == food_id).delete(); db.commit(); db.close()
     return {"status": "success"}
 
 @app.post("/api/water")
 def add_water(tg_id: str = Form(...), date_str: str = Form(...), amount: float = Form(...)):
     db = SessionLocal()
-    db.add(WaterLog(tg_id=tg_id, log_date=date.fromisoformat(date_str), amount_ml=amount))
-    db.commit(); db.close()
+    db.add(WaterLog(tg_id=tg_id, log_date=date.fromisoformat(date_str), amount_ml=amount)); db.commit(); db.close()
     return {"status": "success"}
 
 @app.post("/api/chat")
 def ai_chat(req: ChatMessage):
-    context = "\n".join([f"{msg['role']}: {msg['text']}" for msg in req.history[-6:]]) # Останні 6 повідомлень
-    prompt = f"Ти професійний дієтолог FitLio Pro. Контекст розмови:\n{context}\nКористувач каже: {req.message}. Дай коротку, дружню і корисну відповідь українською."
+    context = "\n".join([f"{msg['role']}: {msg['text']}" for msg in req.history[-6:]])
+    prompt = f"Ти професійний дієтолог FitLio. Контекст розмови:\n{context}\nКористувач каже: {req.message}. Дай коротку і корисну відповідь українською."
     response = model.generate_content(prompt)
     return {"reply": response.text}
 
