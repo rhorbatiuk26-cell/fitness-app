@@ -3,590 +3,674 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Фітнес Бот PRO</title>
+    <title>FitLio Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --tg-theme-bg-color: #f0f2f5;
-            --tg-theme-text-color: #222;
-            --tg-theme-button-color: #0088cc;
-            --tg-theme-button-text-color: #fff;
-            --card-bg: #fff;
-            --primary: #0088cc;
-            --success: #28a745;
-            --danger: #dc3545;
-            --warning: #ff9800;
+            --bg-color: #000000; --card-bg: #1c1c1e; --text-main: #ffffff; --text-sec: #8e8e93;
+            --accent: #ffcc00; --btn-bg: #007aff; --water: #32ade6; --danger: #ff3b30;
+            --ring-kcal: #ffcc00; --ring-p: #34c759; --ring-f: #ff9500; --ring-c: #007aff;
+            --ring-sugar: #af52de; --ring-salt: #ff2d55;
         }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color);
-            color: var(--tg-theme-text-color);
-            margin: 0;
-            padding: 0;
-            padding-bottom: 70px; /* Місце для нижнього меню */
+        [data-theme="light"] { 
+            --bg-color: #f2f2f7; --card-bg: #ffffff; --text-main: #000000; --text-sec: #8e8e93;
+            --accent: #007aff; 
+            --ring-kcal: #007aff; 
         }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, "SF Pro Display", sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 90px; }
+        
+        /* Layouts & Views */
+        .view { display: none; animation: fadeIn 0.3s ease; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .container { padding: 15px; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-color); position: sticky; top: 0; z-index: 10; }
+        .tg-header { display: flex; flex-direction: column; }
+        .tg-title { font-size: 17px; font-weight: 600; }
+        .tg-subtitle { font-size: 13px; color: var(--text-sec); }
+        .premium-badge { background: var(--accent); color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        [data-theme="dark"] .premium-badge { color: #000; }
+        .settings-btn { font-size: 24px; background: none; border: none; cursor: pointer; color: var(--text-main); display: flex; align-items: center; justify-content: center; }
 
-        /* Картки */
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
+        .calendar { display: flex; align-items: center; gap: 15px; font-weight: 600; font-size: 17px; justify-content: center; padding: 10px; }
+        .calendar button { background: none; border: none; font-size: 20px; color: var(--accent); cursor: pointer; }
+        .date-picker-wrapper { position: relative; display: inline-block; padding: 5px 10px; }
+        .date-picker-wrapper input[type="date"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
+        /* Dashboard View */
+        .dashboard { padding: 0 20px 20px 20px; }
+        .rings-wrapper { display: flex; flex-direction: column; align-items: center; gap: 20px; background: var(--card-bg); border-radius: 24px; padding: 25px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .main-ring-box { display: flex; justify-content: center; width: 100%; }
+        .main-ring { position: relative; width: 140px; height: 140px; }
+        .macros-rings { display: flex; justify-content: center; width: 100%; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+        .small-ring-box { display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 28%; }
+        .small-ring { position: relative; width: 65px; height: 65px; }
+        
+        svg.ring { transform: rotate(-90deg); width: 100%; height: 100%; }
+        circle { fill: none; stroke-width: 8; stroke-linecap: round; }
+        .bg-circle { stroke: rgba(142,142,147,0.15); stroke-width: 7; }
+        .ring-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+        .main-ring .ring-text span { display: block; font-size: 32px; font-weight: 700; color: var(--accent); line-height: 1.1; }
+        .main-ring .ring-text small { font-size: 13px; color: var(--text-sec); font-weight: 500; }
+        .small-ring-box label { margin-top: 8px; font-size: 13px; font-weight: 500; color: var(--text-sec); }
+        .small-ring .ring-text { font-size: 11px; font-weight: 600; white-space: nowrap; }
+        
+        /* Quick panel styling */
+        .food-quick-panel { display: flex; justify-content: space-around; background: rgba(142,142,147,0.08); padding: 8px; border-radius: 16px; width: 100%; margin-top: 15px; gap: 8px; }
+        .quick-btn { background: var(--card-bg); border: none; cursor: pointer; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 12px 0; border-radius: 12px; transition: transform 0.1s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .quick-btn:active { transform: scale(0.95); }
+        .quick-btn svg { width: 24px; height: 24px; stroke: var(--accent); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 4px; }
+        .quick-btn span { font-size: 11px; font-weight: 500; color: var(--text-sec); }
 
-        .stat-box {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-        }
+        .food-list { margin-top: 25px; padding: 0 20px; }
+        .water-card { background: var(--card-bg); border-radius: 20px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 25px; }
+        .water-info h3 { font-size: 18px; margin-bottom: 4px; color: var(--water); display: flex; align-items: center; gap: 5px; }
+        .water-info p { color: var(--text-sec); font-size: 14px; font-weight: 500; }
+        .add-water-btn { background: rgba(50, 173, 230, 0.15); color: var(--water); border: none; border-radius: 50px; padding: 10px 18px; font-weight: 700; cursor: pointer; }
 
-        .stat-box h4 { margin: 0 0 5px 0; font-size: 12px; color: #666; }
-        .stat-box p { margin: 0; font-size: 18px; font-weight: bold; }
+        .section-title { font-size: 20px; margin-bottom: 12px; font-weight: 700; }
+        .food-item { background: var(--card-bg); border-radius: 18px; padding: 16px; margin-bottom: 12px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .food-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 17px; margin-bottom: 8px; padding-right: 35px; }
+        .food-macros { font-size: 13px; color: var(--text-sec); display: flex; gap: 6px; flex-wrap: wrap; }
+        .food-macros span { background: rgba(142,142,147,0.1); padding: 4px 8px; border-radius: 6px; color: var(--text-main); font-weight: 500; }
+        .delete-btn { position: absolute; top: 16px; right: 16px; background: rgba(255, 59, 48, 0.1); border: none; cursor: pointer; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+        .delete-btn svg { width: 16px; height: 16px; stroke: var(--danger); fill: none; stroke-width: 2; }
 
-        .remaining-box {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-            margin-bottom: 15px;
-            border: 2px solid var(--primary);
-        }
-        .remaining-box h3 { margin: 0; color: var(--primary); font-size: 24px;}
+        /* Progress & Meals Views */
+        .generic-container { padding: 20px; }
+        .chart-card { background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-top: 20px; }
+        
+        .recent-food-card { background: var(--card-bg); border-radius: 16px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .recent-food-info { display: flex; flex-direction: column; }
+        .recent-food-title { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+        .recent-food-meta { font-size: 13px; color: var(--text-sec); }
+        .add-recent-btn { background: var(--accent); color: #fff; border: none; width: 36px; height: 36px; border-radius: 18px; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        [data-theme="dark"] .add-recent-btn { color: #000; }
 
-        /* Кнопки та інпути */
-        .btn {
-            display: block; width: 100%; padding: 14px; margin: 8px 0;
-            border: none; border-radius: 10px; font-size: 16px; font-weight: bold;
-            background-color: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color); cursor: pointer;
-            text-align: center;
-        }
-        .btn-scan { background-color: var(--success); }
-        .btn-sport { background-color: var(--warning); color: #000; }
-        .btn-small { width: auto; padding: 8px 12px; font-size: 14px; display: inline-block; margin: 0;}
-        .btn-danger { background-color: var(--danger); }
+        /* Modals & Forms */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 100; justify-content: center; align-items: flex-end; }
+        .modal-content { background: var(--card-bg); width: 100%; max-height: 90vh; border-radius: 24px 24px 0 0; padding: 25px; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 25px; font-size: 22px; font-weight: 700; color: var(--text-main); }
+        .close-btn { background: rgba(142,142,147,0.15); border: none; width: 32px; height: 32px; border-radius: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-main); }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-sec); font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 14px; border-radius: 14px; border: 1.5px solid transparent; background: rgba(142,142,147,0.08); color: var(--text-main); font-size: 16px; outline: none; transition: border 0.2s; }
+        input:focus, textarea:focus { border-color: var(--accent); }
+        .btn-primary { width: 100%; background: var(--btn-bg); color: white; border: none; padding: 16px; border-radius: 16px; font-size: 17px; font-weight: 600; margin-top: 10px; cursor: pointer; transition: transform 0.1s; }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-secondary { background: var(--accent); color: #fff; }
+        [data-theme="dark"] .btn-secondary { color: #000; }
+        .scanner-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(142,142,147,0.15); color: var(--text-main); }
 
-        input, select {
-            width: 100%; padding: 12px; margin: 5px 0 15px 0;
-            border: 1px solid #ddd; border-radius: 8px;
-            box-sizing: border-box; font-size: 16px;
-        }
+        /* Floating Chat */
+        .fab-container { position: fixed; bottom: 100px; right: 20px; z-index: 5; }
+        .fab { width: 60px; height: 60px; border-radius: 30px; border: none; box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4); cursor: pointer; display: flex; justify-content: center; align-items: center; background: var(--btn-bg); }
+        .fab svg { width: 28px; height: 28px; stroke: white; fill: none; stroke-width: 2; }
 
-        /* Трекер води */
-        .water-container { text-align: center; }
-        .water-progress {
-            background: #e0e0e0; height: 20px; border-radius: 10px;
-            overflow: hidden; margin: 10px 0;
-        }
-        .water-bar {
-            background: #00a8ff; height: 100%; width: 0%;
-            transition: width 0.3s ease;
-        }
+        /* TabBar */
+        .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 85px; background: var(--card-bg); border-top: 0.5px solid rgba(142,142,147,0.15); display: flex; justify-content: space-around; align-items: center; padding: 0 10px 20px 10px; z-index: 10; }
+        .tab-item { display: flex; flex-direction: column; align-items: center; color: var(--text-sec); font-size: 11px; font-weight: 500; cursor: pointer; flex: 1; transition: color 0.2s; margin-top: 10px;}
+        .tab-item.active { color: var(--accent); }
+        .tab-item svg { width: 26px; height: 26px; margin-bottom: 5px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-        /* Списки */
-        ul { list-style: none; padding: 0; margin: 0; }
-        li {
-            padding: 12px; border-bottom: 1px solid #eee;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        li:last-child { border-bottom: none; }
-        .food-info { flex-grow: 1; }
-        .food-kcal { font-weight: bold; margin-left: 10px; }
-        .exercise-item { color: var(--success); }
-
-        /* Нижня навігація */
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            background: var(--card-bg); display: flex;
-            justify-content: space-around; padding: 10px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000;
-        }
-        .nav-item {
-            text-align: center; color: #888; cursor: pointer; flex: 1;
-            font-size: 12px;
-        }
-        .nav-item.active { color: var(--primary); font-weight: bold; }
-        .nav-item i { display: block; font-size: 20px; margin-bottom: 2px; }
-
-        /* Вкладки */
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        /* Чат */
-        .chat-box { height: 300px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 10px;}
-        .msg { padding: 10px; border-radius: 10px; margin-bottom: 10px; max-width: 80%; }
-        .msg.user { background: var(--primary); color: white; margin-left: auto; }
-        .msg.ai { background: #e0e0e0; color: black; margin-right: auto; }
-
-        .hidden { display: none; }
+        /* Toast */
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-main); color: var(--bg-color); padding: 14px 24px; border-radius: 30px; font-weight: 600; font-size: 15px; z-index: 1000; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s; opacity: 0; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .loader { display: none; text-align: center; padding: 20px; color: var(--accent); font-weight: 600; }
     </style>
 </head>
-<body>
+<body data-theme="dark">
 
-<div class="bottom-nav">
-    <div class="nav-item active" onclick="switchTab('tab-dashboard', this)">
-        <i>🏠</i> Головна
-    </div>
-    <div class="nav-item" onclick="switchTab('tab-progress', this)">
-        <i>📈</i> Прогрес
-    </div>
-    <div class="nav-item" onclick="switchTab('tab-chat', this)">
-        <i>💬</i> Чат з ШІ
-    </div>
-    <div class="nav-item" onclick="switchTab('tab-profile', this)">
-        <i>⚙️</i> Профіль
-    </div>
-</div>
+    <header>
+        <div class="tg-header">
+            <span class="tg-title">FitLio Pro</span>
+            <span class="tg-subtitle">твій розумний трекер</span>
+        </div>
+        <div class="header-actions">
+            <div class="premium-badge">PRO</div>
+            <button class="settings-btn" onclick="openModal('settings-modal')">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </div>
+    </header>
 
-<div class="container">
-
-    <div id="tab-dashboard" class="tab-content active">
-        <h3 style="text-align: center; margin-top: 0;">📅 <span id="current-date"></span></h3>
-        
-        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>Поточна вага: <b id="ui-weight" style="font-size: 18px;">--</b> кг</div>
-            <button class="btn btn-small btn-sport" onclick="updateWeight()">Оновити</button>
+    <div id="view-dashboard" class="view active">
+        <div class="calendar">
+            <button onclick="changeDate(-1)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <div class="date-picker-wrapper">
+                <span id="date-display">Сьогодні</span>
+                <input type="date" id="date-picker" onchange="selectDate(event)">
+            </div>
+            <button onclick="changeDate(1)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
         </div>
 
-        <div class="remaining-box">
-            <h4 style="margin:0 0 5px 0; color:#555;">Залишилось з'їсти сьогодні</h4>
-            <h3 id="ui-remaining">0 ккал</h3>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-box">
-                <h4>Норма</h4>
-                <p id="ui-norm">0</p>
+        <div style="display: flex; gap: 10px; padding: 0 20px; margin-bottom: 20px;">
+            <div class="water-card" style="flex: 1; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
+                <div style="color: var(--text-sec); font-size: 12px; font-weight: 600; text-transform: uppercase;">Поточна Вага</div>
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <span style="font-size: 20px; font-weight: 700;"><span id="ui-weight">--</span> <small style="font-size: 14px; font-weight: 500; color: var(--text-sec);">кг</small></span>
+                    <button style="background: rgba(0, 122, 255, 0.15); color: var(--btn-bg); border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="updateWeight()">+</button>
+                </div>
             </div>
-            <div class="stat-box">
-                <h4>З'їдено 🍽</h4>
-                <p id="ui-consumed" style="color: var(--danger);">0</p>
-            </div>
-            <div class="stat-box" style="grid-column: span 2; background: #e8f5e9;">
-                <h4>Спалено спортом 🔥</h4>
-                <p id="ui-burned" style="color: var(--success);">0</p>
+            <div class="water-card" style="flex: 1; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
+                <div style="color: var(--text-sec); font-size: 12px; font-weight: 600; text-transform: uppercase;">Спорт (спалено)</div>
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <span style="font-size: 20px; font-weight: 700; color: var(--ring-p);"><span id="ui-burned">0</span> <small style="font-size: 14px; font-weight: 500; color: var(--text-sec);">ккал</small></span>
+                    <button style="background: rgba(52, 199, 89, 0.15); color: var(--ring-p); border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="openModal('add-sport-modal')">+</button>
+                </div>
             </div>
         </div>
 
-        <button class="btn btn-scan" onclick="openScanner()">📷 СКАНУВАТИ ШТРИХКОД</button>
-        
-        <div class="stats-grid" style="margin-bottom:0;">
-            <label class="btn" style="margin:0;">
-                📸 Фото їжі
-                <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" onchange="addFoodPhoto(event)">
-            </label>
-            <button class="btn btn-sport" style="margin:0;" onclick="document.getElementById('sport-block').classList.toggle('hidden')">🏃‍♂️ Спорт</button>
-        </div>
-
-        <div id="sport-block" class="card hidden" style="margin-top: 15px; border: 2px solid var(--warning);">
-            <h4>Додати тренування:</h4>
-            <select id="exerciseSelect">
-                <option value="🏃‍♂️ Біг (швидкий)">🏃‍♂️ Біг (швидкий)</option>
-                <option value="🏃‍♀️ Біг (повільний)">🏃‍♀️ Біг (повільний / підтюпцем)</option>
-                <option value="🚶‍♂️ Ходьба (швидка)">🚶‍♂️ Ходьба (швидка)</option>
-                <option value="🏋️‍♂️ Силове тренування (зал)">🏋️‍♂️ Силове тренування (зал)</option>
-                <option value="🦵 Присідання (інтенсивні)">🦵 Присідання (інтенсивні)</option>
-                <option value="🚴‍♂️ Велосипед">🚴‍♂️ Велосипед</option>
-                <option value="🏊‍♂️ Плавання">🏊‍♂️ Плавання</option>
-                <option value="🤸‍♂️ Домашнє тренування (HIIT)">🤸‍♂️ Домашнє тренування (HIIT)</option>
-                <option value="💃 Танці">💃 Танці</option>
-            </select>
-            <input type="number" id="exerciseDuration" placeholder="Час (у хвилинах)">
-            <button class="btn btn-sport" onclick="addExercise()">Записати тренування</button>
-        </div>
-
-        <div class="card" style="margin-top: 15px;">
-            <input type="text" id="foodText" placeholder="Або напишіть: 200г гречки і салат...">
-            <button class="btn" onclick="addFoodText()">Додати текстом</button>
-        </div>
-
-        <div class="card water-container">
-            <h3>💧 Випито води: <span id="ui-water">0</span> мл</h3>
-            <div class="water-progress"><div class="water-bar" id="water-bar"></div></div>
-            <button class="btn btn-small" onclick="addWater()">+ 250 мл 🥤</button>
-        </div>
-
-        <div class="card">
-            <h3>📝 Історія за сьогодні</h3>
-            <ul id="exercise-list"></ul>
-            <ul id="food-list"></ul>
-        </div>
-    </div>
-
-    <div id="tab-progress" class="tab-content">
-        <div class="card">
-            <h3>Калорії за 7 днів</h3>
-            <canvas id="progressChart"></canvas>
-        </div>
-    </div>
-
-    <div id="tab-chat" class="tab-content">
-        <div class="card">
-            <h3>Ваш ШІ-Дієтолог</h3>
-            <div class="chat-box" id="chatBox">
-                <div class="msg ai">Привіт! Я твій особистий фітнес-наставник. Запитай мене про харчування, рецепти або тренування! 💪</div>
+        <div class="dashboard">
+            <div class="rings-wrapper">
+                <div class="main-ring-box">
+                    <div class="main-ring">
+                        <svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="45"></circle><circle id="ring-kcal" cx="50" cy="50" r="45" stroke="var(--ring-kcal)" stroke-dasharray="283" stroke-dashoffset="283"></circle></svg>
+                        <div class="ring-text"><span id="text-kcal">0</span><small>ккал із <span id="norm-kcal">0</span></small></div>
+                    </div>
+                </div>
+                
+                <div class="macros-rings">
+                    <div class="small-ring-box" onclick="showDrilldown('Білки', 'protein')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-p" cx="50" cy="50" r="40" stroke="var(--ring-p)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-p">0/0</div></div><label>Білки</label></div>
+                    <div class="small-ring-box" onclick="showDrilldown('Жири', 'fat')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-f" cx="50" cy="50" r="40" stroke="var(--ring-f)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-f">0/0</div></div><label>Жири</label></div>
+                    <div class="small-ring-box" onclick="showDrilldown('Вуглеводи', 'carbs')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-c" cx="50" cy="50" r="40" stroke="var(--ring-c)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-c">0/0</div></div><label>Вугл.</label></div>
+                    <div class="small-ring-box" onclick="showDrilldown('Цукор', 'sugar')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-sugar" cx="50" cy="50" r="40" stroke="var(--ring-sugar)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-sugar">0/0</div></div><label>Цукор</label></div>
+                    <div class="small-ring-box" onclick="showDrilldown('Сіль', 'salt')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-salt" cx="50" cy="50" r="40" stroke="var(--ring-salt)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-salt">0/0</div></div><label>Сіль</label></div>
+                </div>
+                
+                <div class="food-quick-panel">
+                    <button class="quick-btn" onclick="openFoodModal('[Сніданок]')"><svg viewBox="0 0 24 24"><path d="M17 18a5 5 0 0 0-10 0"></path><line x1="12" y1="2" x2="12" y2="9"></line><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"></line><line x1="1" y1="18" x2="3" y2="18"></line><line x1="21" y1="18" x2="23" y2="18"></line><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"></line><line x1="23" y1="22" x2="1" y2="22"></line><polyline points="8 6 12 2 16 6"></polyline></svg><span>Сніданок</span></button>
+                    <button class="quick-btn" onclick="openFoodModal('[Обід]')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="M4.93 4.93l1.41 1.41"></path><path d="M17.66 17.66l1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="M6.34 17.66l-1.41 1.41"></path><path d="M19.07 4.93l-1.41 1.41"></path></svg><span>Обід</span></button>
+                    <button class="quick-btn" onclick="openFoodModal('[Вечеря]')"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><span>Вечеря</span></button>
+                    <button class="quick-btn" onclick="openFoodModal('')"><svg viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg><span>Додати їжу</span></button>
+                </div>
             </div>
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="chatInput" placeholder="Напишіть повідомлення..." style="margin:0;">
-                <button class="btn btn-small" onclick="sendMessage()">➤</button>
+        </div>
+
+        <div class="food-list">
+            <div class="water-card">
+                <div class="water-info">
+                    <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg> Вода</h3>
+                    <p><span id="water-current">0</span> мл / 2000 мл</p>
+                </div>
+                <button class="add-water-btn" onclick="addWater()">+ 250 мл</button>
+            </div>
+
+            <h3 class="section-title">Прийоми їжі та Активність</h3>
+            <div id="food-container"></div>
+        </div>
+    </div>
+
+    <div id="view-progress" class="view">
+        <div class="generic-container">
+            <h2 class="section-title">Графік калорій</h2>
+            <p style="color: var(--text-sec); font-size: 15px; margin-bottom: 20px;">Твоя активність за останні 7 днів</p>
+            <div class="chart-card">
+                <canvas id="progressChart"></canvas>
             </div>
         </div>
     </div>
 
-    <div id="tab-profile" class="tab-content">
-        <div class="card">
-            <h3>Налаштування профілю</h3>
-            <p style="font-size: 14px; color: #666;">ШІ автоматично розрахує ваші норми за формулою Міффліна-Сан Жеора.</p>
-            <select id="prof-goal">
-                <option value="Схуднення">Схуднення</option>
-                <option value="Підтримка">Підтримка ваги</option>
-                <option value="М'язи">Набір м'язової маси</option>
-            </select>
-            <input type="number" id="prof-age" placeholder="Вік (років)">
-            <input type="number" id="prof-weight" placeholder="Поточна вага (кг)">
-            <input type="number" id="prof-height" placeholder="Зріст (см)">
-            <input type="number" id="prof-target" placeholder="Цільова вага (кг)">
-            <button class="btn" onclick="saveProfile()">Зберегти та Розрахувати</button>
+    <div id="view-meals" class="view">
+        <div class="generic-container">
+            <h2 class="section-title">Історія страв</h2>
+            <p style="color: var(--text-sec); font-size: 15px; margin-bottom: 20px;">Додавай свої улюблені страви в один клік.</p>
+            <div id="recent-foods-container">
+                <div class="loader" id="meals-loader" style="display: block;">Завантажуємо...</div>
+            </div>
         </div>
     </div>
 
-</div>
+    <div class="fab-container">
+        <button class="fab" onclick="openModal('chat-modal')"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+    </div>
 
-<script>
-    // --- ІНІЦІАЛІЗАЦІЯ ---
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-    
-    // Отримуємо ID користувача (для тестів у браузері ставимо 'test_user')
-    const userId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : "test_user";
-    
-    // Дата у правильному форматі для бази (YYYY-MM-DD)
-    const today = new Date().toLocaleDateString('en-CA');
-    document.getElementById('current-date').innerText = new Date().toLocaleDateString('uk-UA');
+    <div class="tab-bar">
+        <div id="tab-dashboard" class="tab-item active" onclick="switchTab('dashboard')">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Перегляд
+        </div>
+        <div id="tab-progress" class="tab-item" onclick="switchTab('progress')">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Прогрес
+        </div>
+        <div class="tab-item" onclick="openFoodModal('')">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Додати
+        </div>
+        <div id="tab-meals" class="tab-item" onclick="switchTab('meals')">
+            <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> Страви
+        </div>
+    </div>
 
-    let chatHistory = [];
-    let progressChartInstance = null;
-
-    // --- НАВІГАЦІЯ ВКЛАДОК ---
-    function switchTab(tabId, element) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        element.classList.add('active');
-        
-        if (tabId === 'tab-progress') loadProgress();
-    }
-
-    // --- ГОЛОВНА ФУНКЦІЯ ЗАВАНТАЖЕННЯ ДАНИХ ---
-    function loadData() {
-        fetch(`/api/daily/${userId}/${today}`)
-        .then(r => r.json())
-        .then(data => {
-            if(data.needs_setup) {
-                switchTab('tab-profile', document.querySelectorAll('.nav-item')[3]);
-                tg.showAlert("Спочатку заповніть параметри тіла для розрахунку норм!");
-                return;
-            }
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Налаштування <button class="close-btn" onclick="closeModal('settings-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
+            <h3 style="margin-bottom: 15px; color: var(--accent);">Розрахунок ШІ</h3>
+            <div class="form-group"><label>Ціль</label><select id="st-goal"><option value="Схуднення">Схуднення</option><option value="Баланс">Баланс</option><option value="М'язи">М'язи</option></select></div>
+            <div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Вік</label><input type="number" id="st-age"></div><div class="form-group" style="flex: 1;"><label>Зріст (см)</label><input type="number" id="st-height"></div></div>
+            <div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Вага (кг)</label><input type="number" id="st-weight"></div><div class="form-group" style="flex: 1;"><label>Бажана (кг)</label><input type="number" id="st-target"></div></div>
+            <button class="btn-primary" onclick="saveAISettings()">Авто-розрахунок ШІ</button>
+            <div id="settings-loader-ai" class="loader">Рахуємо...</div>
             
-            let norm = data.user_norms.kcal;
-            let consumed = data.consumed_kcal || 0;
-            let burned = data.total_burned_kcal || 0;
-            // Правильна формула залишку: Норма - З'їдено + Спалено
-            let remaining = Math.round(norm - consumed + burned);
+            <div style="height: 1px; background: rgba(142,142,147,0.2); margin: 25px 0;"></div>
+            
+            <h3 style="margin-bottom: 15px; color: var(--btn-bg);">Власні норми</h3>
+            <div class="form-group"><label>Калорії (ккал)</label><input type="number" id="man-kcal"></div>
+            <div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Білки (г)</label><input type="number" id="man-p"></div><div class="form-group" style="flex: 1;"><label>Жири (г)</label><input type="number" id="man-f"></div><div class="form-group" style="flex: 1;"><label>Вугл (г)</label><input type="number" id="man-c"></div></div>
+            <div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Цукор (г)</label><input type="number" id="man-sugar"></div><div class="form-group" style="flex: 1;"><label>Сіль (г)</label><input type="number" id="man-salt"></div></div>
+            <button class="btn-primary btn-secondary" onclick="saveManualSettings()">Зберегти мої цифри</button>
+            <div id="settings-loader-man" class="loader">Зберігаємо...</div>
+        </div>
+    </div>
 
-            document.getElementById('ui-weight').innerText = data.current_weight;
-            document.getElementById('ui-norm').innerText = Math.round(norm);
-            document.getElementById('ui-consumed').innerText = Math.round(consumed);
-            document.getElementById('ui-burned').innerText = Math.round(burned);
-            document.getElementById('ui-remaining').innerText = remaining;
+    <div id="add-food-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Додати їжу <button class="close-btn" onclick="closeModal('add-food-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
+            
+            <button class="btn-primary scanner-btn" style="background: var(--success); color: white;" onclick="scanBarcode()">
+                <svg viewBox="0 0 24 24" stroke="white"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M12 8v8M17 8v8"/></svg> Сканувати штрихкод
+            </button>
+            
+            <div style="text-align: center; margin: 15px 0; color: var(--text-sec); font-weight: 600;">або</div>
+            
+            <div class="form-group"><label>Що ти з'їв?</label><textarea id="food-text" rows="2" placeholder="Наприклад: Яєчня з двох яєць і кава..."></textarea></div>
+            <button class="btn-primary" onclick="addFoodText()">Аналізувати текст</button>
+            
+            <div style="text-align: center; margin: 15px 0; color: var(--text-sec); font-weight: 600;">або</div>
+            
+            <div class="form-group"><label>Сфотографуй страву</label><input type="file" id="food-photo" accept="image/*" style="padding: 10px;"></div>
+            <button class="btn-primary btn-secondary" onclick="addFoodPhoto()">Аналізувати фото</button>
+            <div id="food-loader" class="loader">Працюємо...</div>
+        </div>
+    </div>
 
-            // Кольорова індикація
-            const remBox = document.getElementById('ui-remaining');
-            if(remaining < 0) remBox.style.color = 'var(--danger)';
-            else remBox.style.color = 'var(--primary)';
+    <div id="add-sport-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Тренування <button class="close-btn" onclick="closeModal('add-sport-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
+            <div class="form-group">
+                <label>Виберіть активність</label>
+                <select id="exerciseSelect">
+                    <option value="🏃‍♂️ Біг (швидкий)">🏃‍♂️ Біг (швидкий)</option>
+                    <option value="🏃‍♀️ Біг (повільний / підтюпцем)">🏃‍♀️ Біг (повільний / підтюпцем)</option>
+                    <option value="🚶‍♂️ Ходьба (швидка)">🚶‍♂️ Ходьба (швидка)</option>
+                    <option value="🚶‍♀️ Ходьба (прогулянка)">🚶‍♀️ Ходьба (прогулянка)</option>
+                    <option value="🏋️‍♂️ Силове тренування (зал)">🏋️‍♂️ Силове тренування (зал)</option>
+                    <option value="🦵 Присідання (інтенсивні)">🦵 Присідання (інтенсивні)</option>
+                    <option value="🚴‍♂️ Велосипед">🚴‍♂️ Велосипед</option>
+                    <option value="🏊‍♂️ Плавання">🏊‍♂️ Плавання</option>
+                    <option value="🧘‍♀️ Йога / Пілатес">🧘‍♀️ Йога / Пілатес</option>
+                    <option value="🤸‍♂️ Домашнє тренування (HIIT)">🤸‍♂️ Домашнє тренування (HIIT)</option>
+                    <option value="💃 Танці">💃 Танці</option>
+                    <option value="⚽️ Футбол / Баскетбол">⚽️ Футбол / Баскетбол</option>
+                    <option value="🥊 Бокс / Єдиноборства">🥊 Бокс / Єдиноборства</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Тривалість (хвилин)</label>
+                <input type="number" id="exerciseDuration" placeholder="Наприклад: 45">
+            </div>
+            <button class="btn-primary" style="background: var(--ring-p);" onclick="addExercise()">Зберегти</button>
+            <div id="sport-loader" class="loader">Зберігаємо...</div>
+        </div>
+    </div>
 
-            // Вода
-            let water = data.water_ml || 0;
-            document.getElementById('ui-water').innerText = water;
-            let waterPercent = Math.min((water / 2000) * 100, 100); // Ціль 2 літри
-            document.getElementById('water-bar').style.width = waterPercent + '%';
+    <div id="drilldown-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><span id="drilldown-title">Нутрієнт</span> <button class="close-btn" onclick="closeModal('drilldown-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
+            <div id="drilldown-list"></div>
+        </div>
+    </div>
 
-            // Список вправ
-            let eList = document.getElementById('exercise-list');
-            eList.innerHTML = '';
-            data.exercises.forEach(e => {
-                eList.innerHTML += `
-                    <li class="exercise-item">
-                        <div class="food-info">🔥 ${e.name} (${e.duration} хв)</div>
-                        <div class="food-kcal">-${Math.round(e.burned)} ккал</div>
-                    </li>`;
-            });
+    <div id="chat-modal" class="modal">
+        <div class="modal-content" style="height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header">AI Дієтолог <button class="close-btn" onclick="closeModal('chat-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
+            <div id="chat-box" style="flex: 1; overflow-y: auto; margin-bottom: 15px; font-size: 15px; display: flex; flex-direction: column; gap: 10px;"></div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="chat-input" placeholder="Напиши повідомлення..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                <button class="btn-primary" style="width: auto; margin: 0; padding: 0 20px;" onclick="sendChatMessage()">➤</button>
+            </div>
+        </div>
+    </div>
 
-            // Список їжі
-            let fList = document.getElementById('food-list');
-            fList.innerHTML = '';
-            data.foods.forEach(f => {
-                fList.innerHTML += `
-                    <li>
-                        <div class="food-info">🍽 ${f.name}</div>
-                        <div class="food-kcal">${Math.round(f.kcal)} ккал</div>
-                        <button class="btn-small btn-danger" style="margin-left:10px; padding: 4px 8px;" onclick="deleteFood(${f.id})">✖</button>
-                    </li>`;
-            });
-        })
-        .catch(e => console.error("Помилка завантаження даних:", e));
-    }
+    <script>
+        // ВАЖЛИВО: Переконайся, що тут твоя робоча адреса з Railway
+        const API_BASE = "https://fitness-app-production-b4a3.up.railway.app/api";
+        
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        if (tg.colorScheme === 'light') document.body.setAttribute('data-theme', 'light');
+        else document.body.setAttribute('data-theme', 'dark');
+        
+        let userId = tg.initDataUnsafe?.user?.id?.toString() || "test_user_1";
+        let currentDate = new Date();
+        let currentFoods = [];
+        let chatHistory = [];
+        let chartInstance = null;
+        let cachedRecentFoods = null;
 
-    // --- СКАНЕР ШТРИХКОДІВ ---
-    function openScanner() {
-        if (!tg.isVersionAtLeast('6.4')) { 
-            tg.showAlert("Будь ласка, оновіть Telegram для використання камери!"); 
-            return; 
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast'; toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 50);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(()=>toast.remove(), 400); }, 2000);
         }
-        
-        tg.HapticFeedback.impactOccurred('medium');
 
-        tg.showScanQrPopup({ text: "Наведіть камеру на штрихкод продукту" }, (text) => {
-            if (!text) return false;
+        function switchTab(tabId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            document.getElementById(`view-${tabId}`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
             
-            tg.MainButton.setText("Шукаю в базі...").show();
+            if (tabId === 'progress') loadProgressChart();
+            if (tabId === 'meals') loadRecentFoods();
+        }
 
-            fetch('/api/food/barcode', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tg_id: userId, date: today, barcode: text })
-            })
-            .then(res => res.json())
-            .then(data => {
-                tg.MainButton.hide();
-                if (data.status === 'success') {
-                    tg.HapticFeedback.notificationOccurred('success');
-                    tg.showAlert(`✅ Знайдено: ${data.name}\nКалорії: ${data.kcal} ккал`);
-                    loadData(); 
-                } else {
-                    tg.HapticFeedback.notificationOccurred('error');
-                    tg.showAlert("❌ Продукт не знайдено в базі. Спробуйте додати текстом або по фото.");
-                }
-            })
-            .catch(err => {
-                tg.MainButton.hide();
-                tg.showAlert("Помилка зв'язку з сервером.");
-            });
+        function formatDate(d) { return d.toISOString().split('T')[0]; }
 
-            tg.closeScanQrPopup();
-            return true;
-        });
-    }
+        function selectDate(e) {
+            if(e.target.value) {
+                currentDate = new Date(e.target.value);
+                updateDateDisplay();
+            }
+        }
 
-    // --- ФОТО ЇЖІ ---
-    function addFoodPhoto(event) {
-        let file = event.target.files[0];
-        if (!file) return;
-
-        tg.MainButton.setText("ШІ аналізує фото...").show();
-        let formData = new FormData();
-        formData.append("tg_id", userId);
-        formData.append("date_str", today);
-        formData.append("file", file);
-
-        fetch('/api/food/photo', { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(data => {
-            tg.MainButton.hide();
-            if(data.status === 'success') {
-                tg.showAlert(`Розпізнано: ${data.data.name} (${data.data.kcal} ккал)`);
-                loadData();
+        function updateDateDisplay() {
+            const today = new Date();
+            const dateStr = formatDate(currentDate);
+            document.getElementById('date-picker').value = dateStr;
+            
+            if (currentDate.toDateString() === today.toDateString()) {
+                document.getElementById('date-display').innerText = "Сьогодні";
             } else {
-                tg.showAlert("Помилка розпізнавання.");
+                document.getElementById('date-display').innerText = currentDate.toLocaleDateString('uk-UA');
             }
-        });
-    }
+            fetchDailyData();
+        }
 
-    // --- ТЕКСТ ЇЖІ ---
-    function addFoodText() {
-        let text = document.getElementById('foodText').value;
-        if(!text) return;
-        tg.MainButton.setText("ШІ рахує калорії...").show();
+        function changeDate(days) { currentDate.setDate(currentDate.getDate() + days); updateDateDisplay(); }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         
-        fetch('/api/food/text', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tg_id: userId, date: today, text: text })
-        })
-        .then(r => r.json())
-        .then(data => {
-            tg.MainButton.hide();
-            document.getElementById('foodText').value = '';
-            loadData();
-        });
-    }
+        function openFoodModal(categoryPrefix) {
+            document.getElementById('food-text').value = categoryPrefix ? categoryPrefix + ' ' : '';
+            openModal('add-food-modal');
+        }
 
-    // --- ДОДАТИ ТРЕНУВАННЯ ---
-    function addExercise() {
-        let name = document.getElementById('exerciseSelect').value;
-        let duration = document.getElementById('exerciseDuration').value;
-        if (!duration || duration <= 0) { tg.showAlert("Введіть коректний час тренування!"); return; }
+        // --- ГОЛОВНЕ ЗАВАНТАЖЕННЯ ДАНИХ ---
+        async function fetchDailyData() {
+            try {
+                const res = await fetch(`${API_BASE}/daily/${userId}/${formatDate(currentDate)}`);
+                const data = await res.json();
+                if (data.needs_setup) { openModal('settings-modal'); return; }
+                
+                currentFoods = data.foods;
+                document.getElementById('water-current').innerText = data.water_ml;
+                
+                // ВАГА ТА СПОРТ
+                document.getElementById('ui-weight').innerText = data.current_weight ? data.current_weight : "--";
+                document.getElementById('ui-burned').innerText = Math.round(data.total_burned_kcal || 0);
+                
+                ['kcal','p','f','c','sugar','salt'].forEach(key => {
+                    let k = key === 'p' ? 'protein' : key === 'f' ? 'fat' : key === 'c' ? 'carbs' : key;
+                    if(document.getElementById(`man-${key}`)) document.getElementById(`man-${key}`).value = Math.round(data.user_norms[k]);
+                });
 
-        tg.MainButton.setText("Зберігаю тренування...").show();
-        fetch('/api/exercise', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tg_id: userId, date: today, name: name, duration_min: parseInt(duration) })
-        })
-        .then(r => r.json())
-        .then(data => {
-            tg.MainButton.hide();
-            tg.HapticFeedback.notificationOccurred('success');
-            tg.showAlert(`🔥 Супер! Ви спалили ${data.burned_kcal} ккал.`);
-            document.getElementById('exerciseDuration').value = '';
-            document.getElementById('sport-block').classList.add('hidden');
-            loadData();
-        });
-    }
+                updateUI(data.user_norms, data.foods, data);
+            } catch (e) { console.error("Error:", e); }
+        }
 
-    // --- ОНОВИТИ ВАГУ ---
-    function updateWeight() {
-        let current = document.getElementById('ui-weight').innerText;
-        let newWeight = prompt("Введіть вашу поточну вагу (кг):", current !== "--" ? current : "70");
-        if (newWeight && !isNaN(newWeight.replace(',', '.'))) {
-            fetch('/api/weight', {
+        function updateUI(norms, foods, data) {
+            let totals = { kcal: 0, protein: 0, fat: 0, carbs: 0, sugar: 0, salt: 0 };
+            const container = document.getElementById('food-container'); container.innerHTML = '';
+            
+            let hasItems = false;
+
+            // Відмальовуємо спорт
+            if (data && data.exercises && data.exercises.length > 0) {
+                hasItems = true;
+                data.exercises.forEach(e => {
+                    container.innerHTML += `
+                        <div class="food-item" style="border-left: 4px solid var(--ring-p);">
+                            <div class="food-header"><span>🏋️ ${e.name} (${e.duration} хв)</span><span style="color:var(--ring-p);">- ${Math.round(e.burned)} ккал</span></div>
+                        </div>`;
+                });
+            }
+
+            // Відмальовуємо їжу
+            if (foods && foods.length > 0) {
+                hasItems = true;
+                foods.forEach(f => {
+                    totals.kcal += f.kcal; totals.protein += f.protein; totals.fat += f.fat;
+                    totals.carbs += f.carbs; totals.sugar += f.sugar; totals.salt += f.salt;
+                    container.innerHTML += `
+                        <div class="food-item">
+                            <div class="food-header"><span>${f.name}</span><span style="color:var(--accent);">${Math.round(f.kcal)} ккал</span></div>
+                            <div class="food-macros"><span>Б: ${Math.round(f.protein)}г</span> <span>Ж: ${Math.round(f.fat)}г</span> <span>В: ${Math.round(f.carbs)}г</span></div>
+                            <button class="delete-btn" onclick="deleteFood(${f.id})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                        </div>`;
+                });
+            }
+
+            if(!hasItems) {
+                container.innerHTML = '<p style="text-align:center; color:var(--text-sec); margin-top:20px;">Ще немає записів за цей день.</p>';
+            }
+
+            // ОНОВЛЕНА МАТЕМАТИКА КАЛОРІЙ: Спорт збільшує кільце (Дозволяє більше з'їсти)
+            let burned = data ? (data.total_burned_kcal || 0) : 0;
+            let adjustedNorm = (norms.kcal || 2000) + burned; 
+
+            setRing('kcal', totals.kcal, adjustedNorm, 283); 
+            setRing('p', totals.protein, norms.protein, 251); 
+            setRing('f', totals.fat, norms.fat, 251); 
+            setRing('c', totals.carbs, norms.carbs, 251); 
+            setRing('sugar', totals.sugar, norms.sugar, 251); 
+            setRing('salt', totals.salt, norms.salt, 251);
+        }
+
+        function setRing(id, current, max, circumference) {
+            const val = Math.round(current);
+            const maxVal = Math.round(max);
+            
+            if (id === 'kcal') {
+                document.getElementById(`text-${id}`).innerText = val;
+                document.getElementById(`norm-${id}`).innerText = maxVal;
+            } else {
+                document.getElementById(`text-${id}`).innerText = `${val}/${maxVal}`;
+            }
+            
+            const percentage = Math.max(0, Math.min(current / max, 1)) || 0;
+            const offset = circumference - (percentage * circumference);
+            document.getElementById(`ring-${id}`).style.strokeDashoffset = offset;
+
+            if ((id === 'sugar' || id === 'salt') && current > max) {
+                document.getElementById(`text-${id}`).style.color = "var(--danger)";
+            } else if (id !== 'kcal') {
+                document.getElementById(`text-${id}`).style.color = "var(--text-main)";
+            }
+        }
+
+        // --- НОВІ ФУНКЦІЇ ДЛЯ ВАГИ ТА СПОРТУ ---
+        function updateWeight() {
+            let current = document.getElementById('ui-weight').innerText;
+            let newWeight = prompt("Введіть поточну вагу (кг):", current !== "--" ? current : "70");
+            if (newWeight && !isNaN(newWeight.replace(',', '.'))) {
+                fetch(`${API_BASE}/weight`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), weight: parseFloat(newWeight.replace(',', '.')) })
+                }).then(() => {
+                    showToast(`Вагу оновлено! 💪`);
+                    fetchDailyData();
+                });
+            }
+        }
+
+        async function addExercise() {
+            let name = document.getElementById('exerciseSelect').value;
+            let duration = document.getElementById('exerciseDuration').value;
+            if (!duration || duration <= 0) { showToast("Введіть час!"); return; }
+
+            document.getElementById('sport-loader').style.display = 'block';
+            await fetch(`${API_BASE}/exercise`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tg_id: userId, date: today, weight: parseFloat(newWeight.replace(',', '.')) })
-            }).then(() => {
-                tg.showAlert(`Вагу оновлено! 💪`);
-                loadData();
+                body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), name: name, duration_min: parseInt(duration) })
+            });
+            document.getElementById('sport-loader').style.display = 'none';
+            document.getElementById('exerciseDuration').value = '';
+            closeModal('add-sport-modal');
+            showToast("Тренування додано! 🔥");
+            fetchDailyData();
+        }
+
+        // --- ПРАВИЛЬНИЙ СКАНЕР ШТРИХКОДІВ ---
+        async function scanBarcode() {
+            if (!tg.isVersionAtLeast('6.4')) { 
+                showToast("Оновіть Telegram для камери!"); return; 
+            }
+            tg.HapticFeedback.impactOccurred('medium');
+            
+            tg.showScanQrPopup({ text: "Скануйте штрихкод продукту" }, async function(text) {
+                if (!text) return false;
+                tg.closeScanQrPopup();
+                
+                document.getElementById('food-loader').style.display = 'block';
+                try {
+                    const res = await fetch(`${API_BASE}/food/barcode`, { 
+                        method: 'POST', 
+                        headers: {'Content-Type': 'application/json'}, 
+                        body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), barcode: text }) 
+                    });
+                    const data = await res.json();
+                    document.getElementById('food-loader').style.display = 'none';
+                    closeModal('add-food-modal'); 
+                    
+                    if (data.status === 'success') {
+                        tg.HapticFeedback.notificationOccurred('success');
+                        showToast(`Додано: ${data.name}`); 
+                        fetchDailyData();
+                    } else {
+                        tg.HapticFeedback.notificationOccurred('error');
+                        showToast("Продукт не знайдено в базі."); 
+                    }
+                } catch (e) {
+                    document.getElementById('food-loader').style.display = 'none';
+                    showToast("Помилка зв'язку з сервером.");
+                }
+                return true;
             });
         }
-    }
 
-    // --- ВОДА ---
-    function addWater() {
-        let formData = new FormData();
-        formData.append("tg_id", userId);
-        formData.append("date_str", today);
-        formData.append("amount", 250);
-
-        fetch('/api/water', { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(data => {
-            tg.HapticFeedback.impactOccurred('light');
-            loadData();
-        });
-    }
-
-    // --- ВИДАЛЕННЯ ---
-    function deleteFood(id) {
-        if(confirm("Видалити цей запис?")) {
-            fetch(`/api/food/${id}`, { method: 'DELETE' })
-            .then(() => loadData());
-        }
-    }
-
-    // --- ПРОФІЛЬ ---
-    function saveProfile() {
-        let goal = document.getElementById('prof-goal').value;
-        let age = document.getElementById('prof-age').value;
-        let weight = document.getElementById('prof-weight').value;
-        let height = document.getElementById('prof-height').value;
-        let target = document.getElementById('prof-target').value;
-
-        if(!age || !weight || !height) { tg.showAlert("Заповніть всі поля!"); return; }
-
-        tg.MainButton.setText("Розраховуємо норми...").show();
-        fetch('/api/profile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                tg_id: userId, goal: goal, age: parseInt(age),
-                height: parseFloat(height), weight: parseFloat(weight), target_weight: parseFloat(target || weight)
-            })
-        })
-        .then(r => r.json())
-        .then(data => {
-            tg.MainButton.hide();
-            tg.showAlert("Профіль успішно налаштовано! Норми розраховано.");
-            switchTab('tab-dashboard', document.querySelectorAll('.nav-item')[0]);
-            loadData();
-        });
-    }
-
-    // --- ЧАТ З ШІ ---
-    function appendMessage(text, sender) {
-        let box = document.getElementById('chatBox');
-        box.innerHTML += `<div class="msg ${sender}">${text}</div>`;
-        box.scrollTop = box.scrollHeight;
-    }
-
-    function sendMessage() {
-        let input = document.getElementById('chatInput');
-        let text = input.value;
-        if(!text) return;
-
-        appendMessage(text, 'user');
-        input.value = '';
-
-        fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tg_id: userId, message: text, history: chatHistory })
-        })
-        .then(r => r.json())
-        .then(data => {
-            appendMessage(data.reply, 'ai');
-            chatHistory.push({role: 'user', text: text});
-            chatHistory.push({role: 'model', text: data.reply});
-        });
-    }
-
-    // --- ГРАФІК ПРОГРЕСУ ---
-    function loadProgress() {
-        fetch(`/api/progress/${userId}`)
-        .then(r => r.json())
-        .then(data => {
-            let ctx = document.getElementById('progressChart').getContext('2d');
-            
-            // Видаляємо старий графік, якщо він існує, щоб не накладався
-            if(progressChartInstance) {
-                progressChartInstance.destroy();
+        async function deleteFood(id) {
+            if(confirm("Видалити цей запис?")) {
+                await fetch(`${API_BASE}/food/${id}`, { method: 'DELETE' });
+                showToast("Видалено!"); fetchDailyData(); cachedRecentFoods = null;
             }
+        }
 
-            progressChartInstance = new Chart(ctx, {
+        async function actionWithLoader(loaderId, modalId, apiPath, payload, isForm = false) {
+            document.getElementById(loaderId).style.display = 'block';
+            let options = { method: 'POST' };
+            if(isForm) options.body = payload;
+            else { options.headers = {'Content-Type': 'application/json'}; options.body = JSON.stringify(payload); }
+            await fetch(`${API_BASE}${apiPath}`, options);
+            document.getElementById(loaderId).style.display = 'none';
+            if(modalId) closeModal(modalId);
+            showToast("Успішно!"); fetchDailyData();
+            cachedRecentFoods = null;
+        }
+
+        function saveAISettings() { actionWithLoader('settings-loader-ai', 'settings-modal', '/profile', { tg_id: userId, goal: document.getElementById('st-goal').value, age: parseInt(document.getElementById('st-age').value), height: parseFloat(document.getElementById('st-height').value), weight: parseFloat(document.getElementById('st-weight').value), target_weight: parseFloat(document.getElementById('st-target').value) }); }
+        function saveManualSettings() { actionWithLoader('settings-loader-man', 'settings-modal', '/profile/manual', { tg_id: userId, kcal: parseFloat(document.getElementById('man-kcal').value)||2000, protein: parseFloat(document.getElementById('man-p').value)||100, fat: parseFloat(document.getElementById('man-f').value)||60, carbs: parseFloat(document.getElementById('man-c').value)||200, sugar: parseFloat(document.getElementById('man-sugar').value)||50, salt: parseFloat(document.getElementById('man-salt').value)||5 }); }
+        function addFoodText() { const text = document.getElementById('food-text').value; if(text) { actionWithLoader('food-loader', 'add-food-modal', '/food/text', { tg_id: userId, date: formatDate(currentDate), text: text }); document.getElementById('food-text').value=''; } }
+        function addFoodPhoto() { const file = document.getElementById('food-photo').files[0]; if(file){ const fd = new FormData(); fd.append('tg_id', userId); fd.append('date_str', formatDate(currentDate)); fd.append('file', file); actionWithLoader('food-loader', 'add-food-modal', '/food/photo', fd, true); document.getElementById('food-photo').value=''; } }
+        async function addWater() { const fd = new FormData(); fd.append('tg_id', userId); fd.append('date_str', formatDate(currentDate)); fd.append('amount', 250); await fetch(`${API_BASE}/water`, { method: 'POST', body: fd }); showToast("+ 250мл 💧"); fetchDailyData(); }
+
+        function showDrilldown(title, macroKey) {
+            document.getElementById('drilldown-title').innerText = title; const list = document.getElementById('drilldown-list'); list.innerHTML = '';
+            let filtered = currentFoods.filter(f => f[macroKey] > 0);
+            if (filtered.length === 0) list.innerHTML = '<p style="color:var(--text-sec); text-align:center;">Немає записів.</p>';
+            else filtered.forEach(f => { list.innerHTML += `<div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(142,142,147,0.15);"><span style="font-weight:600;">${f.name}</span><strong style="color:var(--accent);">${f[macroKey]} г</strong></div>`; });
+            openModal('drilldown-modal');
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input'); const msg = input.value; if (!msg) return;
+            const box = document.getElementById('chat-box');
+            box.innerHTML += `<div style="align-self: flex-end; background: var(--btn-bg); color: white; padding: 10px 14px; border-radius: 18px 18px 0 18px; max-width: 80%;">${msg}</div>`;
+            input.value = ''; box.scrollTop = box.scrollHeight;
+
+            chatHistory.push({role: "user", text: msg});
+            const res = await fetch(`${API_BASE}/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tg_id: userId, message: msg, history: chatHistory }) });
+            const data = await res.json();
+            
+            chatHistory.push({role: "assistant", text: data.reply});
+            box.innerHTML += `<div style="align-self: flex-start; background: rgba(142,142,147,0.1); color: var(--text-main); padding: 10px 14px; border-radius: 18px 18px 18px 0; max-width: 80%; line-height: 1.4;">${data.reply}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function loadProgressChart() {
+            const res = await fetch(`${API_BASE}/progress/${userId}`);
+            const data = await res.json();
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: data.dates.map(d => d.slice(5)), // Показуємо тільки місяць-день
-                    datasets: [{
-                        label: 'Спожито ккал',
-                        data: data.kcal,
-                        backgroundColor: 'rgba(0, 136, 204, 0.5)',
-                        borderColor: 'rgba(0, 136, 204, 1)',
-                        borderWidth: 1,
-                        borderRadius: 5
-                    }]
+                    labels: data.dates.map(d => d.split('-')[2] + '.' + d.split('-')[1]),
+                    datasets: [{ label: 'Спожито ккал', data: data.kcal, backgroundColor: '#007aff', borderRadius: 6 }]
                 },
-                options: {
-                    scales: { y: { beginAtZero: true } }
-                }
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(142,142,147,0.1)' } }, x: { grid: { display: false } } } }
             });
-        });
-    }
-
-    // Перший запуск
-    loadData();
-</script>
-
+        }
+        
+        async function loadRecentFoods() {
+            const container = document.getElementById('recent-foods-container');
+            if (cachedRecentFoods) return renderRecentFoods(cachedRecentFoods); 
+            
+            container.innerHTML = '<div class="loader" style="display: block;">Завантажуємо...</div>';
+            const res = await fetch(`${API_BASE}/foods/recent/${userId}`);
+            cachedRecentFoods = await res.json();
+            renderRecentFoods(cachedRecentFoods);
+        }
+        
+        function renderRecentFoods(foods) {
+            const container = document.getElementById('recent-foods-container');
+            container.innerHTML = '';
+            if(foods.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:var(--text-sec);">Ти ще нічого не додавав. Коли додаси першу страву, вона з\'явиться тут!</p>';
+                return;
+            }
+            foods.forEach(f => {
+                const foodJson = JSON.stringify(f).replace(/"/g, '&quot;');
+                container.innerHTML += `
+                    <div class="recent-food-card">
+                        <div class="recent-food-info">
+                            <span class="recent-food-title">${f.name}</span>
+                            <span class="recent-food-meta">${Math.round(f.kcal)} ккал • Б:${f.protein} Ж:${f.fat} В:${f.carbs}</span>
+                        </div>
+                        <button class="add-recent-btn" onclick="addDirectFood('${foodJson}')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                    </div>`;
+            });
+        }
+        
+        async function addDirectFood(foodJsonStr) {
+            const foodObj = JSON.parse(foodJsonStr);
+            await fetch(`${API_BASE}/food/direct`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), food: foodObj })
+            });
+            showToast(`Додано: ${foodObj.name}`);
+            fetchDailyData(); 
+        }
+        
+        updateDateDisplay();
+    </script>
 </body>
 </html>
