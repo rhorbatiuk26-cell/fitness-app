@@ -228,9 +228,9 @@ def add_food_barcode(req: BarcodeRequest):
             save_food_to_db(req.tg_id, req.date, food_data)
             return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
     except:
-        pass # Якщо база лежить, йдемо до ШІ (fallback)
+        pass # Якщо база лежить, йдемо до ШІ
 
-    # 2. Якщо не знайшли, використовуємо старий метод (ШІ вгадує)
+    # 2. Якщо не знайшли, використовуємо ШІ
     prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. If unknown, return generic 'Невідомий продукт' with 0 macros. Return ONLY valid JSON: name(string in Ukrainian), kcal, protein, fat, carbs, sugar, salt(numbers). No markdown."
     response = model.generate_content(prompt)
     try: food_data = json.loads(response.text.strip('` \njson'))
@@ -242,6 +242,15 @@ def add_food_barcode(req: BarcodeRequest):
 def delete_food(food_id: int):
     db = SessionLocal()
     db.query(FoodLog).filter(FoodLog.id == food_id).delete(); db.commit(); db.close()
+    return {"status": "success"}
+
+# --- ФУНКЦІЯ ВИДАЛЕННЯ ТРЕНУВАННЯ ---
+@app.delete("/api/exercise/{exercise_id}")
+def delete_exercise(exercise_id: int):
+    db = SessionLocal()
+    db.query(ExerciseLog).filter(ExerciseLog.id == exercise_id).delete()
+    db.commit()
+    db.close()
     return {"status": "success"}
 
 @app.post("/api/water")
