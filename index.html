@@ -75,13 +75,19 @@
 
         .section-title { font-size: 20px; margin-bottom: 12px; font-weight: 700; }
         
-        /* АНІМАЦІЯ ДЛЯ ДОВГОГО НАТИСКАННЯ */
+        /* АНІМАЦІЯ ТА ЖОРСТКЕ БЛОКУВАННЯ ВИДІЛЕННЯ IOS */
         .food-item { 
             background: var(--card-bg); border-radius: 18px; padding: 16px; 
             margin-bottom: 12px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
             transition: transform 0.2s ease, background-color 0.2s ease;
-            user-select: none; -webkit-user-select: none; 
             cursor: pointer;
+            /* Ці рядки блокують iPhone меню */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
         .food-item.pressing {
             transform: scale(0.95);
@@ -362,7 +368,6 @@
     </div>
 
     <script>
-        // ВАЖЛИВО: Переконайся, що тут твоя адреса з Railway
         const API_BASE = "https://fitness-app-production-b4a3.up.railway.app/api";
         
         let tg = window.Telegram.WebApp;
@@ -459,12 +464,13 @@
             
             let hasItems = false;
 
-            // ВІДМАЛЬОВКА ТРЕНУВАНЬ (Із подіями затискання)
+            // ВІДМАЛЬОВКА ТРЕНУВАНЬ З oncontextmenu
             if (data && data.exercises && data.exercises.length > 0) {
                 hasItems = true;
                 data.exercises.forEach(e => {
                     container.innerHTML += `
                         <div class="food-item" style="border-left: 4px solid var(--ring-p);"
+                             oncontextmenu="return false;"
                              ontouchstart="startPress(this, ${e.id}, 'exercise')" ontouchend="cancelPress(this)" ontouchmove="cancelPress(this)"
                              onmousedown="startPress(this, ${e.id}, 'exercise')" onmouseup="cancelPress(this)" onmouseleave="cancelPress(this)">
                             <div class="food-header"><span>🏋️ ${e.name} (${e.duration} хв)</span><span style="color:var(--ring-p);">- ${Math.round(e.burned)} ккал</span></div>
@@ -472,7 +478,7 @@
                 });
             }
 
-            // ВІДМАЛЬОВКА ЇЖІ (Із подіями затискання)
+            // ВІДМАЛЬОВКА ЇЖІ З oncontextmenu
             if (foods && foods.length > 0) {
                 hasItems = true;
                 foods.forEach(f => {
@@ -480,6 +486,7 @@
                     totals.carbs += f.carbs; totals.sugar += f.sugar; totals.salt += f.salt;
                     container.innerHTML += `
                         <div class="food-item"
+                             oncontextmenu="return false;"
                              ontouchstart="startPress(this, ${f.id}, 'food')" ontouchend="cancelPress(this)" ontouchmove="cancelPress(this)"
                              onmousedown="startPress(this, ${f.id}, 'food')" onmouseup="cancelPress(this)" onmouseleave="cancelPress(this)">
                             <div class="food-header"><span>${f.name}</span><span style="color:var(--accent);">${Math.round(f.kcal)} ккал</span></div>
@@ -512,7 +519,7 @@
                 element.classList.remove('pressing');
                 if (type === 'food') deleteFood(id);
                 else deleteExercise(id);
-            }, 600); // Час затискання в мілісекундах
+            }, 600);
         }
 
         function cancelPress(element) {
