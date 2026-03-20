@@ -25,7 +25,7 @@ ACTIVITIES = {
 # --- Налаштування директорії та БД ---
 DATA_DIR = Path("/app/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DATA_DIR / "database.db"
+DB_PATH = DATA_DIR / "fitlio_base.db"
 
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
