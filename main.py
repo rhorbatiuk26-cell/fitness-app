@@ -47,6 +47,7 @@ class User(Base):
     norm_c = Column(Float)
     norm_sugar = Column(Float)
     norm_salt = Column(Float)
+    norm_fiber = Column(Float, default=28.0) # НОВА КОЛОНКА ДЛЯ НОРМИ КЛІТКОВИНИ
 
 class FoodLog(Base):
     __tablename__ = "food_logs"
@@ -60,7 +61,7 @@ class FoodLog(Base):
     carbs = Column(Float)
     sugar = Column(Float)
     salt = Column(Float)
-    fiber = Column(Float, default=0.0) # НОВА КОЛОНКА ДЛЯ КЛІТКОВИНИ
+    fiber = Column(Float, default=0.0) 
 
 class WaterLog(Base):
     __tablename__ = "water_logs"
@@ -87,13 +88,17 @@ class WeightLog(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# БЕЗПЕЧНА МІГРАЦІЯ: Додаємо колонку fiber, якщо її ще немає, не видаляючи старі дані!
+# БЕЗПЕЧНА МІГРАЦІЯ
 with engine.connect() as conn:
     try:
         conn.execute(text("ALTER TABLE food_logs ADD COLUMN fiber FLOAT DEFAULT 0.0"))
         conn.commit()
-    except OperationalError:
-        pass # Якщо колонка вже є, скрипт просто піде далі
+    except OperationalError: pass
+    
+    try:
+        conn.execute(text("ALTER TABLE users ADD COLUMN norm_fiber FLOAT DEFAULT 28.0"))
+        conn.commit()
+    except OperationalError: pass
 
 app = FastAPI(title="FitLio Pro API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
@@ -103,7 +108,7 @@ model = genai.GenerativeModel('gemini-2.5-flash')
 
 # --- Схеми ---
 class ProfileData(BaseModel): tg_id: str; goal: str; weight: float; target_weight: float; height: float; age: int
-class ManualNorms(BaseModel): tg_id: str; kcal: float; protein: float; fat: float; carbs: float; sugar: float; salt: float
+class ManualNorms(BaseModel): tg_id: str; kcal: float; protein: float; fat: float; carbs: float; sugar: float; salt: float; fiber: float
 class TextFoodRequest(BaseModel): tg_id: str; date: date; text: str
 class BarcodeRequest(BaseModel): tg_id: str; date: date; barcode: str
 class DirectFoodRequest(BaseModel): tg_id: str; date: date; food: dict
@@ -115,18 +120,20 @@ class ChatMessage(BaseModel): tg_id: str; message: str; history: List[Dict[str, 
 @app.post("/api/profile")
 def update_profile(data: ProfileData):
     db = SessionLocal()
-    prompt = f"Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}. Limits: Sugar up to 50g, Salt up to 5g. Return ONLY a valid JSON with keys: kcal, protein, fat, carbs, sugar, salt."
+    # ОНОВЛЕНИЙ ПРОМПТ: ШІ сам рахує клітковину
+    prompt = f"Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}. Limits: Sugar up to 50g, Salt up to 5g. Calculate optimal 'fiber' strictly based on calories (approx 14g per 1000 kcal). Return ONLY a valid JSON with keys: kcal, protein, fat, carbs, sugar, salt, fiber."
     try:
         response = model.generate_content(prompt)
         norms = json.loads(response.text.strip('` \njson'))
     except:
-        norms = {"kcal": 2000, "protein": 100, "fat": 60, "carbs": 200, "sugar": 50, "salt": 5}
+        norms = {"kcal": 2000, "protein": 100, "fat": 60, "carbs": 200, "sugar": 50, "salt": 5, "fiber": 28}
 
     user = db.query(User).filter(User.tg_id == data.tg_id).first()
     if not user: user = User(tg_id=data.tg_id); db.add(user)
     
     user.goal = data.goal; user.weight = data.weight; user.target_weight = data.target_weight; user.height = data.height; user.age = data.age
-    user.norm_kcal = norms.get('kcal', 2000); user.norm_p = norms.get('protein', 100); user.norm_f = norms.get('fat', 60); user.norm_c = norms.get('carbs', 200); user.norm_sugar = norms.get('sugar', 50); user.norm_salt = norms.get('salt', 5)
+    user.norm_kcal = norms.get('kcal', 2000); user.norm_p = norms.get('protein', 100); user.norm_f = norms.get('fat', 60); user.norm_c = norms.get('carbs', 200)
+    user.norm_sugar = norms.get('sugar', 50); user.norm_salt = norms.get('salt', 5); user.norm_fiber = norms.get('fiber', 28)
     
     db.add(WeightLog(tg_id=data.tg_id, log_date=date.today(), weight=data.weight))
     db.commit(); db.close()
@@ -137,7 +144,8 @@ def update_manual_norms(data: ManualNorms):
     db = SessionLocal()
     user = db.query(User).filter(User.tg_id == data.tg_id).first()
     if not user: user = User(tg_id=data.tg_id); db.add(user)
-    user.norm_kcal = data.kcal; user.norm_p = data.protein; user.norm_f = data.fat; user.norm_c = data.carbs; user.norm_sugar = data.sugar; user.norm_salt = data.salt
+    user.norm_kcal = data.kcal; user.norm_p = data.protein; user.norm_f = data.fat; user.norm_c = data.carbs
+    user.norm_sugar = data.sugar; user.norm_salt = data.salt; user.norm_fiber = data.fiber
     db.commit(); db.close()
     return {"status": "success"}
 
@@ -154,7 +162,7 @@ def get_daily_data(tg_id: str, log_date: date):
     db.close()
     return {
         "needs_setup": False,
-        "user_norms": {"kcal": user.norm_kcal, "protein": user.norm_p, "fat": user.norm_f, "carbs": user.norm_c, "sugar": user.norm_sugar, "salt": user.norm_salt},
+        "user_norms": {"kcal": user.norm_kcal, "protein": user.norm_p, "fat": user.norm_f, "carbs": user.norm_c, "sugar": user.norm_sugar, "salt": user.norm_salt, "fiber": user.norm_fiber},
         "current_weight": user.weight,
         "foods": [{"id": f.id, "name": f.name, "kcal": f.kcal, "protein": f.protein, "fat": f.fat, "carbs": f.carbs, "sugar": f.sugar, "salt": f.salt, "fiber": f.fiber} for f in foods],
         "water_ml": sum([w.amount_ml for w in water]),
@@ -187,7 +195,6 @@ def get_recent_foods(tg_id: str):
 
 def save_food_to_db(req_tg_id, req_date, food_data):
     db = SessionLocal()
-    # Зберігаємо клітковину офіційно в базу
     new_food = FoodLog(tg_id=req_tg_id, log_date=req_date, name=food_data['name'], kcal=food_data['kcal'], protein=food_data['protein'], fat=food_data['fat'], carbs=food_data['carbs'], sugar=food_data.get('sugar', 0), salt=food_data.get('salt', 0), fiber=food_data.get('fiber', 0))
     db.add(new_food); db.commit(); db.refresh(new_food); db.close()
     return new_food.id
