@@ -189,8 +189,7 @@
                     <div class="small-ring-box" onclick="showDrilldown('Вуглеводи', 'carbs')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-c" cx="50" cy="50" r="40" stroke="var(--ring-c)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-c">0/0</div></div><label>Вугл.</label></div>
                     <div class="small-ring-box" onclick="showDrilldown('Цукор', 'sugar')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-sugar" cx="50" cy="50" r="40" stroke="var(--ring-sugar)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-sugar">0/0</div></div><label>Цукор</label></div>
                     <div class="small-ring-box" onclick="showDrilldown('Сіль', 'salt')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-salt" cx="50" cy="50" r="40" stroke="var(--ring-salt)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-salt">0/0</div></div><label>Сіль</label></div>
-                    
-                    <div class="small-ring-box" onclick="showDrilldown('Клітковина', 'fiber')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-fiber" cx="50" cy="50" r="40" stroke="var(--ring-fiber)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-fiber">0/30</div></div><label>Клітк.</label></div>
+                    <div class="small-ring-box" onclick="showDrilldown('Клітковина', 'fiber')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-fiber" cx="50" cy="50" r="40" stroke="var(--ring-fiber)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-fiber">0/0</div></div><label>Клітк.</label></div>
                 </div>
                 
                 <div class="food-quick-panel">
@@ -275,10 +274,17 @@
             <button class="btn-primary" onclick="saveAISettings()">Авто-розрахунок ШІ</button>
             <div id="settings-loader-ai" class="loader">Рахуємо...</div>
             <div style="height: 1px; background: rgba(142,142,147,0.2); margin: 25px 0;"></div>
+            
             <h3 style="margin-bottom: 15px; color: var(--btn-bg);">Власні норми</h3>
             <div class="form-group"><label>Калорії (ккал)</label><input type="number" id="man-kcal"></div>
             <div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Білки (г)</label><input type="number" id="man-p"></div><div class="form-group" style="flex: 1;"><label>Жири (г)</label><input type="number" id="man-f"></div><div class="form-group" style="flex: 1;"><label>Вугл (г)</label><input type="number" id="man-c"></div></div>
-            <div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Цукор (г)</label><input type="number" id="man-sugar"></div><div class="form-group" style="flex: 1;"><label>Сіль (г)</label><input type="number" id="man-salt"></div></div>
+            
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>Цукор (г)</label><input type="number" id="man-sugar"></div>
+                <div class="form-group" style="flex: 1;"><label>Сіль (г)</label><input type="number" id="man-salt"></div>
+                <div class="form-group" style="flex: 1;"><label>Клітк. (г)</label><input type="number" id="man-fiber"></div>
+            </div>
+            
             <button class="btn-primary btn-secondary" onclick="saveManualSettings()">Зберегти мої цифри</button>
             <div id="settings-loader-man" class="loader">Зберігаємо...</div>
         </div>
@@ -455,7 +461,7 @@
                 document.getElementById('ui-weight').innerText = data.current_weight ? data.current_weight : "--";
                 document.getElementById('ui-burned').innerText = Math.round(data.total_burned_kcal || 0);
                 
-                ['kcal','p','f','c','sugar','salt'].forEach(key => {
+                ['kcal','p','f','c','sugar','salt','fiber'].forEach(key => {
                     let k = key === 'p' ? 'protein' : key === 'f' ? 'fat' : key === 'c' ? 'carbs' : key;
                     if(document.getElementById(`man-${key}`)) document.getElementById(`man-${key}`).value = Math.round(data.user_norms[k]);
                 });
@@ -514,7 +520,7 @@
             setRing('c', totals.carbs, norms.carbs, 251); 
             setRing('sugar', totals.sugar, norms.sugar, 251); 
             setRing('salt', totals.salt, norms.salt, 251);
-            setRing('fiber', totals.fiber, 30, 251); // Норма клітковини ~ 30г
+            setRing('fiber', totals.fiber, norms.fiber || 28, 251); 
         }
 
         let pressTimer;
@@ -684,7 +690,16 @@
             if (nameInput) localStorage.setItem('fitlio_user_name', nameInput);
             updateGreeting();
 
-            actionWithLoader('settings-loader-man', 'settings-modal', '/profile/manual', { tg_id: userId, kcal: parseFloat(document.getElementById('man-kcal').value)||2000, protein: parseFloat(document.getElementById('man-p').value)||100, fat: parseFloat(document.getElementById('man-f').value)||60, carbs: parseFloat(document.getElementById('man-c').value)||200, sugar: parseFloat(document.getElementById('man-sugar').value)||50, salt: parseFloat(document.getElementById('man-salt').value)||5 }); 
+            actionWithLoader('settings-loader-man', 'settings-modal', '/profile/manual', { 
+                tg_id: userId, 
+                kcal: parseFloat(document.getElementById('man-kcal').value)||2000, 
+                protein: parseFloat(document.getElementById('man-p').value)||100, 
+                fat: parseFloat(document.getElementById('man-f').value)||60, 
+                carbs: parseFloat(document.getElementById('man-c').value)||200, 
+                sugar: parseFloat(document.getElementById('man-sugar').value)||50, 
+                salt: parseFloat(document.getElementById('man-salt').value)||5,
+                fiber: parseFloat(document.getElementById('man-fiber').value)||28
+            }); 
         }
 
         function addFoodText() { const text = document.getElementById('food-text').value; if(text) { actionWithLoader('food-loader', 'add-food-modal', '/food/text', { tg_id: userId, date: formatDate(currentDate), text: text }); document.getElementById('food-text').value=''; } }
