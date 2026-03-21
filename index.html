@@ -13,23 +13,21 @@
             --bg-color: #000000; --card-bg: #1c1c1e; --text-main: #ffffff; --text-sec: #8e8e93;
             --accent: #ffcc00; --btn-bg: #007aff; --water: #32ade6; --danger: #ff3b30;
             --ring-kcal: #ffcc00; --ring-p: #34c759; --ring-f: #ff9500; --ring-c: #007aff;
-            --ring-sugar: #af52de; --ring-salt: #ff2d55;
+            --ring-sugar: #af52de; --ring-salt: #ff2d55; --ring-fiber: #00c7be;
         }
         [data-theme="light"] { 
             --bg-color: #f2f2f7; --card-bg: #ffffff; --text-main: #000000; --text-sec: #8e8e93;
-            --accent: #007aff; 
-            --ring-kcal: #007aff; 
+            --accent: #007aff; --ring-kcal: #007aff; 
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, "SF Pro Display", sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 90px; }
         
-        /* Layouts & Views */
         .view { display: none; animation: fadeIn 0.3s ease; }
         .view.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-color); position: sticky; top: 0; z-index: 10; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 0 20px; background: var(--bg-color); position: sticky; top: 0; z-index: 10; }
         .tg-header { display: flex; flex-direction: column; }
         .tg-title { font-size: 17px; font-weight: 600; }
         .tg-subtitle { font-size: 13px; color: var(--text-sec); }
@@ -37,12 +35,14 @@
         [data-theme="dark"] .premium-badge { color: #000; }
         .settings-btn { font-size: 24px; background: none; border: none; cursor: pointer; color: var(--text-main); display: flex; align-items: center; justify-content: center; }
 
+        .greeting { padding: 5px 20px 0 20px; }
+        .greeting h2 { font-size: 24px; font-weight: 700; margin: 0; }
+
         .calendar { display: flex; align-items: center; gap: 15px; font-weight: 600; font-size: 17px; justify-content: center; padding: 10px; }
         .calendar button { background: none; border: none; font-size: 20px; color: var(--accent); cursor: pointer; }
         .date-picker-wrapper { position: relative; display: inline-block; padding: 5px 10px; }
         .date-picker-wrapper input[type="date"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 
-        /* Dashboard View */
         .dashboard { padding: 0 20px 20px 20px; }
         .rings-wrapper { display: flex; flex-direction: column; align-items: center; gap: 20px; background: var(--card-bg); border-radius: 24px; padding: 25px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
         .main-ring-box { display: flex; justify-content: center; width: 100%; }
@@ -60,7 +60,6 @@
         .small-ring-box label { margin-top: 8px; font-size: 13px; font-weight: 500; color: var(--text-sec); }
         .small-ring .ring-text { font-size: 11px; font-weight: 600; white-space: nowrap; }
         
-        /* Quick panel styling */
         .food-quick-panel { display: flex; justify-content: space-around; background: rgba(142,142,147,0.08); padding: 8px; border-radius: 16px; width: 100%; margin-top: 15px; gap: 8px; }
         .quick-btn { background: var(--card-bg); border: none; cursor: pointer; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 12px 0; border-radius: 12px; transition: transform 0.1s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .quick-btn:active { transform: scale(0.95); }
@@ -75,30 +74,18 @@
 
         .section-title { font-size: 20px; margin-bottom: 12px; font-weight: 700; }
         
-        /* АНІМАЦІЯ ТА ЖОРСТКЕ БЛОКУВАННЯ ВИДІЛЕННЯ IOS */
         .food-item { 
             background: var(--card-bg); border-radius: 18px; padding: 16px; 
             margin-bottom: 12px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-            transition: transform 0.2s ease, background-color 0.2s ease;
-            cursor: pointer;
-            /* Ці рядки блокують iPhone меню */
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+            transition: transform 0.2s ease, background-color 0.2s ease; cursor: pointer;
+            -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
         }
-        .food-item.pressing {
-            transform: scale(0.95);
-            background-color: rgba(255, 59, 48, 0.08); 
-        }
+        .food-item.pressing { transform: scale(0.95); background-color: rgba(255, 59, 48, 0.08); }
 
         .food-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 17px; margin-bottom: 8px; }
         .food-macros { font-size: 13px; color: var(--text-sec); display: flex; gap: 6px; flex-wrap: wrap; }
         .food-macros span { background: rgba(142,142,147,0.1); padding: 4px 8px; border-radius: 6px; color: var(--text-main); font-weight: 500; }
 
-        /* Progress & Meals Views */
         .generic-container { padding: 20px; }
         .chart-card { background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-top: 20px; }
         
@@ -109,7 +96,6 @@
         .add-recent-btn { background: var(--accent); color: #fff; border: none; width: 36px; height: 36px; border-radius: 18px; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
         [data-theme="dark"] .add-recent-btn { color: #000; }
 
-        /* Modals & Forms */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 100; justify-content: center; align-items: flex-end; }
         .modal-content { background: var(--card-bg); width: 100%; max-height: 90vh; border-radius: 24px 24px 0 0; padding: 25px; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -126,23 +112,19 @@
         [data-theme="dark"] .btn-secondary { color: #000; }
         .scanner-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(142,142,147,0.15); color: var(--text-main); }
 
-        /* Floating Chat */
         .fab-container { position: fixed; bottom: 100px; right: 20px; z-index: 5; }
         .fab { width: 60px; height: 60px; border-radius: 30px; border: none; box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4); cursor: pointer; display: flex; justify-content: center; align-items: center; background: var(--btn-bg); }
         .fab svg { width: 28px; height: 28px; stroke: white; fill: none; stroke-width: 2; }
 
-        /* TabBar */
         .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 85px; background: var(--card-bg); border-top: 0.5px solid rgba(142,142,147,0.15); display: flex; justify-content: space-around; align-items: center; padding: 0 5px 20px 5px; z-index: 10; }
         .tab-item { display: flex; flex-direction: column; align-items: center; color: var(--text-sec); font-size: 11px; font-weight: 500; cursor: pointer; flex: 1; transition: color 0.2s; margin-top: 10px;}
         .tab-item.active { color: var(--accent); }
         .tab-item svg { width: 24px; height: 24px; margin-bottom: 5px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-        /* Toast */
         .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: var(--text-main); color: var(--bg-color); padding: 14px 24px; border-radius: 30px; font-weight: 600; font-size: 15px; z-index: 1000; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s; opacity: 0; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
         .loader { display: none; text-align: center; padding: 20px; color: var(--accent); font-weight: 600; }
         
-        /* Стиль для камери сканера */
         #reader { width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
         #reader video { border-radius: 12px; }
     </style>
@@ -163,6 +145,10 @@
     </header>
 
     <div id="view-dashboard" class="view active">
+        <div class="greeting">
+            <h2 id="greeting-name">Привіт! 👋</h2>
+        </div>
+
         <div class="calendar">
             <button onclick="changeDate(-1)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
             <div class="date-picker-wrapper">
@@ -203,6 +189,8 @@
                     <div class="small-ring-box" onclick="showDrilldown('Вуглеводи', 'carbs')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-c" cx="50" cy="50" r="40" stroke="var(--ring-c)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-c">0/0</div></div><label>Вугл.</label></div>
                     <div class="small-ring-box" onclick="showDrilldown('Цукор', 'sugar')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-sugar" cx="50" cy="50" r="40" stroke="var(--ring-sugar)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-sugar">0/0</div></div><label>Цукор</label></div>
                     <div class="small-ring-box" onclick="showDrilldown('Сіль', 'salt')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-salt" cx="50" cy="50" r="40" stroke="var(--ring-salt)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-salt">0/0</div></div><label>Сіль</label></div>
+                    
+                    <div class="small-ring-box" onclick="showDrilldown('Клітковина', 'fiber')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-fiber" cx="50" cy="50" r="40" stroke="var(--ring-fiber)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-fiber">0/30</div></div><label>Клітк.</label></div>
                 </div>
                 
                 <div class="food-quick-panel">
@@ -274,6 +262,12 @@
     <div id="settings-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">Налаштування <button class="close-btn" onclick="closeModal('settings-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
+            
+            <div class="form-group">
+                <label>Ваше ім'я (як до вас звертатися?)</label>
+                <input type="text" id="st-name" placeholder="Наприклад: Олександр">
+            </div>
+            
             <h3 style="margin-bottom: 15px; color: var(--accent);">Розрахунок ШІ</h3>
             <div class="form-group"><label>Ціль</label><select id="st-goal"><option value="Схуднення">Схуднення</option><option value="Баланс">Баланс</option><option value="М'язи">М'язи</option></select></div>
             <div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Вік</label><input type="number" id="st-age"></div><div class="form-group" style="flex: 1;"><label>Зріст (см)</label><input type="number" id="st-height"></div></div>
@@ -384,6 +378,18 @@
         let cachedRecentFoods = null;
         let html5QrcodeScanner = null;
 
+        function updateGreeting() {
+            let savedName = localStorage.getItem('fitlio_user_name');
+            let greetingEl = document.getElementById('greeting-name');
+            let inputEl = document.getElementById('st-name');
+            if (savedName) {
+                greetingEl.innerText = `Привіт, ${savedName}! 👋`;
+                if (inputEl) inputEl.value = savedName;
+            } else {
+                greetingEl.innerText = `Привіт! 👋`;
+            }
+        }
+
         function showToast(msg) {
             const toast = document.createElement('div');
             toast.className = 'toast'; toast.innerText = msg;
@@ -459,12 +465,11 @@
         }
 
         function updateUI(norms, foods, data) {
-            let totals = { kcal: 0, protein: 0, fat: 0, carbs: 0, sugar: 0, salt: 0 };
+            let totals = { kcal: 0, protein: 0, fat: 0, carbs: 0, sugar: 0, salt: 0, fiber: 0 };
             const container = document.getElementById('food-container'); container.innerHTML = '';
             
             let hasItems = false;
 
-            // ВІДМАЛЬОВКА ТРЕНУВАНЬ З oncontextmenu
             if (data && data.exercises && data.exercises.length > 0) {
                 hasItems = true;
                 data.exercises.forEach(e => {
@@ -478,19 +483,20 @@
                 });
             }
 
-            // ВІДМАЛЬОВКА ЇЖІ З oncontextmenu
             if (foods && foods.length > 0) {
                 hasItems = true;
                 foods.forEach(f => {
                     totals.kcal += f.kcal; totals.protein += f.protein; totals.fat += f.fat;
-                    totals.carbs += f.carbs; totals.sugar += f.sugar; totals.salt += f.salt;
+                    totals.carbs += f.carbs; totals.sugar += f.sugar; totals.salt += f.salt; 
+                    totals.fiber += (f.fiber || 0);
+
                     container.innerHTML += `
                         <div class="food-item"
                              oncontextmenu="return false;"
                              ontouchstart="startPress(this, ${f.id}, 'food')" ontouchend="cancelPress(this)" ontouchmove="cancelPress(this)"
                              onmousedown="startPress(this, ${f.id}, 'food')" onmouseup="cancelPress(this)" onmouseleave="cancelPress(this)">
                             <div class="food-header"><span>${f.name}</span><span style="color:var(--accent);">${Math.round(f.kcal)} ккал</span></div>
-                            <div class="food-macros"><span>Б: ${Math.round(f.protein)}г</span> <span>Ж: ${Math.round(f.fat)}г</span> <span>В: ${Math.round(f.carbs)}г</span></div>
+                            <div class="food-macros"><span>Б: ${Math.round(f.protein)}г</span> <span>Ж: ${Math.round(f.fat)}г</span> <span>В: ${Math.round(f.carbs)}г</span> <span style="color:var(--ring-fiber)">Кл: ${Math.round(f.fiber || 0)}г</span></div>
                         </div>`;
                 });
             }
@@ -508,9 +514,9 @@
             setRing('c', totals.carbs, norms.carbs, 251); 
             setRing('sugar', totals.sugar, norms.sugar, 251); 
             setRing('salt', totals.salt, norms.salt, 251);
+            setRing('fiber', totals.fiber, 30, 251); // Норма клітковини ~ 30г
         }
 
-        // --- ЛОГІКА ДОВГОГО НАТИСКАННЯ ---
         let pressTimer;
         function startPress(element, id, type) {
             element.classList.add('pressing');
@@ -665,8 +671,22 @@
             cachedRecentFoods = null;
         }
 
-        function saveAISettings() { actionWithLoader('settings-loader-ai', 'settings-modal', '/profile', { tg_id: userId, goal: document.getElementById('st-goal').value, age: parseInt(document.getElementById('st-age').value), height: parseFloat(document.getElementById('st-height').value), weight: parseFloat(document.getElementById('st-weight').value), target_weight: parseFloat(document.getElementById('st-target').value) }); }
-        function saveManualSettings() { actionWithLoader('settings-loader-man', 'settings-modal', '/profile/manual', { tg_id: userId, kcal: parseFloat(document.getElementById('man-kcal').value)||2000, protein: parseFloat(document.getElementById('man-p').value)||100, fat: parseFloat(document.getElementById('man-f').value)||60, carbs: parseFloat(document.getElementById('man-c').value)||200, sugar: parseFloat(document.getElementById('man-sugar').value)||50, salt: parseFloat(document.getElementById('man-salt').value)||5 }); }
+        function saveAISettings() { 
+            let nameInput = document.getElementById('st-name').value;
+            if (nameInput) localStorage.setItem('fitlio_user_name', nameInput);
+            updateGreeting();
+
+            actionWithLoader('settings-loader-ai', 'settings-modal', '/profile', { tg_id: userId, goal: document.getElementById('st-goal').value, age: parseInt(document.getElementById('st-age').value), height: parseFloat(document.getElementById('st-height').value), weight: parseFloat(document.getElementById('st-weight').value), target_weight: parseFloat(document.getElementById('st-target').value) }); 
+        }
+
+        function saveManualSettings() { 
+            let nameInput = document.getElementById('st-name').value;
+            if (nameInput) localStorage.setItem('fitlio_user_name', nameInput);
+            updateGreeting();
+
+            actionWithLoader('settings-loader-man', 'settings-modal', '/profile/manual', { tg_id: userId, kcal: parseFloat(document.getElementById('man-kcal').value)||2000, protein: parseFloat(document.getElementById('man-p').value)||100, fat: parseFloat(document.getElementById('man-f').value)||60, carbs: parseFloat(document.getElementById('man-c').value)||200, sugar: parseFloat(document.getElementById('man-sugar').value)||50, salt: parseFloat(document.getElementById('man-salt').value)||5 }); 
+        }
+
         function addFoodText() { const text = document.getElementById('food-text').value; if(text) { actionWithLoader('food-loader', 'add-food-modal', '/food/text', { tg_id: userId, date: formatDate(currentDate), text: text }); document.getElementById('food-text').value=''; } }
         function addFoodPhoto() { const file = document.getElementById('food-photo').files[0]; if(file){ const fd = new FormData(); fd.append('tg_id', userId); fd.append('date_str', formatDate(currentDate)); fd.append('file', file); actionWithLoader('food-loader', 'add-food-modal', '/food/photo', fd, true); document.getElementById('food-photo').value=''; } }
         async function addWater() { const fd = new FormData(); fd.append('tg_id', userId); fd.append('date_str', formatDate(currentDate)); fd.append('amount', 250); await fetch(`${API_BASE}/water`, { method: 'POST', body: fd }); showToast("+ 250мл 💧"); fetchDailyData(); }
@@ -750,6 +770,7 @@
             fetchDailyData(); 
         }
         
+        updateGreeting();
         updateDateDisplay();
     </script>
 </body>
