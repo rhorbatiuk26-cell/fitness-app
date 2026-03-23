@@ -186,7 +186,7 @@
                 <div class="macros-rings">
                     <div class="small-ring-box" onclick="showDrilldown('Білки', 'protein')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-p" cx="50" cy="50" r="40" stroke="var(--ring-p)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-p">0/0</div></div><label>Білки</label></div>
                     <div class="small-ring-box" onclick="showDrilldown('Жири', 'fat')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-f" cx="50" cy="50" r="40" stroke="var(--ring-f)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-f">0/0</div></div><label>Жири</label></div>
-                    <div class="small-ring-box" onclick="showDrilldown('Вуглеводи', 'carbs')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-c" cx="50" cy="50" r="40" stroke="var(--ring-c)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-c">0/0</div></div><label>Вугл.</label></div>
+                    <div class="small-ring-box" onclick="showDrilldown('Чисті Вуглеводи', 'carbs')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-c" cx="50" cy="50" r="40" stroke="var(--ring-c)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-c">0/0</div></div><label>Чисті Вугл.</label></div>
                     <div class="small-ring-box" onclick="showDrilldown('Цукор', 'sugar')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-sugar" cx="50" cy="50" r="40" stroke="var(--ring-sugar)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-sugar">0/0</div></div><label>Цукор</label></div>
                     <div class="small-ring-box" onclick="showDrilldown('Сіль', 'salt')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-salt" cx="50" cy="50" r="40" stroke="var(--ring-salt)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-salt">0/0</div></div><label>Сіль</label></div>
                     <div class="small-ring-box" onclick="showDrilldown('Клітковина', 'fiber')"><div class="small-ring"><svg class="ring" viewBox="0 0 100 100"><circle class="bg-circle" cx="50" cy="50" r="40"></circle><circle id="ring-fiber" cx="50" cy="50" r="40" stroke="var(--ring-fiber)" stroke-dasharray="251" stroke-dashoffset="251"></circle></svg><div class="ring-text" id="text-fiber">0/0</div></div><label>Клітк.</label></div>
@@ -284,7 +284,11 @@
             
             <h3 style="margin-bottom: 15px; color: var(--btn-bg);">Власні норми</h3>
             <div class="form-group"><label>Калорії (ккал)</label><input type="number" id="man-kcal"></div>
-            <div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Білки (г)</label><input type="number" id="man-p"></div><div class="form-group" style="flex: 1;"><label>Жири (г)</label><input type="number" id="man-f"></div><div class="form-group" style="flex: 1;"><label>Вугл (г)</label><input type="number" id="man-c"></div></div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>Білки (г)</label><input type="number" id="man-p"></div>
+                <div class="form-group" style="flex: 1;"><label>Жири (г)</label><input type="number" id="man-f"></div>
+                <div class="form-group" style="flex: 1;"><label>Ч.Вугл (г)</label><input type="number" id="man-c"></div>
+            </div>
             
             <div style="display: flex; gap: 10px;">
                 <div class="form-group" style="flex: 1;"><label>Цукор (г)</label><input type="number" id="man-sugar"></div>
@@ -300,7 +304,7 @@
     <div id="confirm-food-modal" class="modal" style="z-index: 2000;">
         <div class="modal-content">
             <div class="modal-header">Перевірка ШІ 🤖 <button class="close-btn" onclick="closeModal('confirm-food-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
-            <p style="color: var(--text-sec); font-size: 13px; margin-bottom: 15px;">ШІ міг сплутати інгредієнти. Якщо бачиш помилку в назві (наприклад, замість майонезу — сметана) або в цифрах — просто виправ текст перед збереженням!</p>
+            <p style="color: var(--text-sec); font-size: 13px; margin-bottom: 15px;">ШІ міг сплутати інгредієнти. Якщо бачиш помилку в назві або в цифрах — просто виправ текст перед збереженням!</p>
             
             <div class="form-group">
                 <label style="color: var(--accent);">✏️ Що це насправді? (Назва і вага)</label>
@@ -317,9 +321,10 @@
                 <div class="form-group" style="flex: 1;"><label>Жири (г)</label><input type="number" id="cf-f"></div>
             </div>
             <div style="display: flex; gap: 10px;">
-                <div class="form-group" style="flex: 1;"><label>Вугл. (г)</label><input type="number" id="cf-c"></div>
+                <div class="form-group" style="flex: 1;"><label>Чисті вугл. (г)</label><input type="number" id="cf-c"></div>
                 <div class="form-group" style="flex: 1;"><label>Клітк. (г)</label><input type="number" id="cf-fib"></div>
             </div>
+            <p style="color: var(--text-sec); font-size: 11px; margin-top: -5px; margin-bottom: 15px;">* ШІ вже відняв клітковину від загальних вуглеводів</p>
             
             <button class="btn-primary" onclick="saveConfirmedFood()">✅ Все правильно, зберегти</button>
         </div>
@@ -329,7 +334,7 @@
         <div class="modal-content">
             <div class="modal-header">Додати їжу <button class="close-btn" onclick="closeModal('add-food-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
             
-            <button class="btn-primary scanner-btn" style="background: var(--success); color: white;" onclick="openCustomScanner()">
+            <button class="btn-primary scanner-btn" style="background: var(--ring-p); color: white;" onclick="openCustomScanner()">
                 <svg viewBox="0 0 24 24" stroke="white"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M12 8v8M17 8v8"/></svg> Сканувати штрихкод
             </button>
             
@@ -416,7 +421,6 @@
     </div>
 
     <script>
-        // 🛑 УВАГА: ВСТАВ СЮДИ СВОЄ ПОСИЛАННЯ З RAILWAY 🛑
         const API_BASE = "https://fitness-app-production-b4a3.up.railway.app/api"; 
         
         let tg = window.Telegram.WebApp;
@@ -430,7 +434,7 @@
         let currentFoods = [];
         let chatHistory = [];
         let chartInstance = null;
-        let weightChartInstance = null; // ДОДАНО
+        let weightChartInstance = null;
         let cachedRecentFoods = null;
         let html5QrcodeScanner = null;
 
@@ -466,7 +470,7 @@
             
             if (tabId === 'progress') {
                 loadProgressChart();
-                loadWeightChart(); // ДОДАНО
+                loadWeightChart();
             }
             if (tabId === 'meals') loadRecentFoods();
         }
@@ -560,7 +564,7 @@
                              ontouchstart="startPress(this, ${f.id}, 'food')" ontouchend="cancelPress(this)" ontouchmove="cancelPress(this)"
                              onmousedown="startPress(this, ${f.id}, 'food')" onmouseup="cancelPress(this)" onmouseleave="cancelPress(this)">
                             <div class="food-header"><span>${f.name}</span><span style="color:var(--accent);">${Math.round(f.kcal)} ккал</span></div>
-                            <div class="food-macros"><span>Б: ${Math.round(f.protein)}г</span> <span>Ж: ${Math.round(f.fat)}г</span> <span>В: ${Math.round(f.carbs)}г</span> <span style="color:var(--ring-fiber)">Кл: ${Math.round(f.fiber || 0)}г</span></div>
+                            <div class="food-macros"><span>Б: ${Math.round(f.protein)}г</span> <span>Ж: ${Math.round(f.fat)}г</span> <span>Ч.Вугл: ${Math.round(f.carbs)}г</span> <span style="color:var(--ring-fiber)">Кл: ${Math.round(f.fiber || 0)}г</span></div>
                         </div>`;
                 });
             }
@@ -943,7 +947,6 @@
             });
         }
 
-        // ДОДАНО: Функція завантаження графіка ваги
         async function loadWeightChart() {
             const res = await fetch(`${API_BASE}/progress/weight/${userId}`);
             const data = await res.json();
@@ -1002,7 +1005,7 @@
                     <div class="recent-food-card">
                         <div class="recent-food-info">
                             <span class="recent-food-title">${f.name}</span>
-                            <span class="recent-food-meta">${Math.round(f.kcal)} ккал • Б:${f.protein} Ж:${f.fat} В:${f.carbs}</span>
+                            <span class="recent-food-meta">${Math.round(f.kcal)} ккал • Б:${f.protein} Ж:${f.fat} В:${f.carbs} (чисті)</span>
                         </div>
                         <button class="add-recent-btn" onclick="addDirectFood('${foodJson}')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
                     </div>`;
