@@ -23,13 +23,19 @@ ACTIVITIES = {
     "⚽️ Футбол / Баскетбол": 7.0, "🥊 Бокс / Єдиноборства": 10.0
 }
 
-# --- Налаштування директорії та БД ---
-DATA_DIR = Path("/app/data")
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DATA_DIR / "fitlio_base.db"
+# --- Налаштування Бази Даних (PostgreSQL або SQLite) ---
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+if DATABASE_URL:
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    engine = create_engine(DATABASE_URL)
+else:
+    DATA_DIR = Path("/app/data")
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    DB_PATH = DATA_DIR / "fitlio_base.db"
+    engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -122,7 +128,7 @@ def update_profile(data: ProfileData):
     prompt = f"Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}. Limits: Sugar up to 50g, Salt up to 5g. Return ONLY a valid JSON with keys: kcal, protein, fat, carbs (MUST BE NET CARBS, excluding fiber), sugar, salt, fiber (calculate separately, approx 14g per 1000 kcal)."
     try:
         response = model.generate_content(prompt)
-        norms = json.loads(response.text.strip('` \njson'))
+        norms = json.loads(response.text.replace('```json', '').replace('```', '').strip())
     except:
         norms = {"kcal": 2000, "protein": 100, "fat": 60, "carbs": 200, "sugar": 50, "salt": 5, "fiber": 28}
 
@@ -197,7 +203,7 @@ def save_food_to_db(req_tg_id, req_date, food_data):
     db.add(new_food); db.commit(); db.refresh(new_food); db.close()
     return new_food.id
 
-# ЦЕ ЄДИНИЙ ЕНДПОІНТ, ЯКИЙ ТЕПЕР ФІЗИЧНО ЗБЕРІГАЄ В БАЗУ (після кнопки користувача)
+# ЦЕ ЄДИНИЙ ЕНДПОІНТ, ЯКИЙ ФІЗИЧНО ЗБЕРІГАЄ В БАЗУ (після кнопки підтвердження)
 @app.post("/api/food/direct")
 def add_food_direct(req: DirectFoodRequest):
     save_food_to_db(req.tg_id, req.date, req.food)
@@ -205,16 +211,27 @@ def add_food_direct(req: DirectFoodRequest):
 
 @app.post("/api/food/text")
 def add_food_text(req: TextFoodRequest):
-    prompt = f"Analyze food: '{req.text}'. Estimate portion size in grams if not specified. Return ONLY valid JSON: keys name(string in Ukrainian, MUST include estimated weight in grams at the end, e.g., 'Омлет (150г)'), kcal, protein, fat, carbs (MUST BE NET CARBS ONLY, completely separate from fiber), fiber (calculated completely separately), sugar, salt (numbers). No markdown."
-    response = model.generate_content(prompt)
-    food_data = json.loads(response.text.strip('` \njson'))
+    prompt = "Analyze food: '" + req.text + "'. Estimate portion size in grams. Return ONLY raw JSON object. Keys: 'name' (string in Ukrainian, include weight e.g., 'Омлет (150г)'), 'kcal', 'protein', 'fat', 'carbs' (Net carbs, excluding fiber), 'fiber', 'sugar', 'salt'. All macros as numbers. If unsure, make a logical guess. No markdown, no text outside JSON."
+    try:
+        response = model.generate_content(prompt)
+        clean_text = response.text.replace('```json', '').replace('```', '').strip()
+        food_data = json.loads(clean_text)
+    except Exception as e:
+        food_data = {"name": f"Не розпізнано ({req.text})", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
+        
     return {"status": "success", "food": food_data}
 
 @app.post("/api/food/photo")
 async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file: UploadFile = File(...)):
     contents = await file.read()
-    response = model.generate_content(["Analyze food image. Estimate portion size in grams. Return ONLY valid JSON: name(string in Ukrainian, MUST include estimated weight in grams at the end, e.g., 'Салат (200г)'), kcal, protein, fat, carbs (MUST BE NET CARBS ONLY, completely separate from fiber), fiber (calculated completely separately), sugar, salt(numbers). No markdown.", {"mime_type": file.content_type, "data": contents}])
-    food_data = json.loads(response.text.strip('` \njson'))
+    prompt = "Analyze food image. Estimate portion size in grams. Return ONLY raw JSON object. Keys: 'name' (string in Ukrainian, include weight e.g., 'Борщ (250г)'), 'kcal', 'protein', 'fat', 'carbs' (Net carbs, excluding fiber), 'fiber', 'sugar', 'salt'. All macros as numbers. If you don't know the exact food, guess based on visual elements. No markdown, no text outside JSON."
+    try:
+        response = model.generate_content([prompt, {"mime_type": file.content_type, "data": contents}])
+        clean_text = response.text.replace('```json', '').replace('```', '').strip()
+        food_data = json.loads(clean_text)
+    except Exception as e:
+        food_data = {"name": "Страва з фото (вага невідома)", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
+        
     return {"status": "success", "data": food_data}
 
 @app.post("/api/food/barcode")
@@ -240,10 +257,14 @@ def add_food_barcode(req: BarcodeRequest):
     except:
         pass 
 
-    prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. If unknown, return generic 'Невідомий продукт' with 0 macros. Return ONLY valid JSON: name(string in Ukrainian, MUST include estimated weight in grams, e.g., 'Шоколад (100г)'), kcal, protein, fat, carbs (MUST BE NET CARBS ONLY, completely separate from fiber), fiber (calculated completely separately), sugar, salt(numbers). No markdown."
-    response = model.generate_content(prompt)
-    try: food_data = json.loads(response.text.strip('` \njson'))
-    except: food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
+    prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. If unknown, return generic 'Невідомий продукт' with 0 macros. Return ONLY raw JSON object. Keys: 'name' (string in Ukrainian, include weight e.g., 'Шоколад (100г)'), 'kcal', 'protein', 'fat', 'carbs' (Net carbs, excluding fiber), 'fiber', 'sugar', 'salt'. All macros as numbers. No markdown, no text outside JSON."
+    try:
+        response = model.generate_content(prompt)
+        clean_text = response.text.replace('```json', '').replace('```', '').strip()
+        food_data = json.loads(clean_text)
+    except: 
+        food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
+        
     return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
 
 @app.delete("/api/food/{food_id}")
