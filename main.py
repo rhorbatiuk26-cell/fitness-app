@@ -111,7 +111,7 @@ class ManualNorms(BaseModel): tg_id: str; kcal: float; protein: float; fat: floa
 class TextFoodRequest(BaseModel): tg_id: str; date: date; text: str
 class BarcodeRequest(BaseModel): tg_id: str; date: date; barcode: str
 class DirectFoodRequest(BaseModel): tg_id: str; date: date; food: dict
-class ExerciseRequest(BaseModel): tg_id: str; date: date; name: str; duration_min: int
+class ExerciseRequest(BaseModel): tg_id: str; date: date; name: str; duration_min: int; custom_kcal: Optional[float] = None
 class WeightRequest(BaseModel): tg_id: str; date: date; weight: float
 class ChatMessage(BaseModel): tg_id: str; message: str; history: List[Dict[str, str]] = []
 
@@ -204,20 +204,18 @@ def add_food_direct(req: DirectFoodRequest):
 
 @app.post("/api/food/text")
 def add_food_text(req: TextFoodRequest):
-    # ДОДАНО: Вимога завжди дописувати грами в назву
     prompt = f"Analyze food: '{req.text}'. Estimate portion size in grams if not specified. Return ONLY valid JSON: keys name(string in Ukrainian, MUST include estimated weight in grams at the end, e.g., 'Омлет (150г)'), kcal, protein, fat, carbs (MUST BE NET CARBS ONLY, completely separate from fiber), fiber (calculated completely separately), sugar, salt (numbers). No markdown."
     response = model.generate_content(prompt)
     food_data = json.loads(response.text.strip('` \njson'))
-    save_food_to_db(req.tg_id, req.date, food_data)
+    if isinstance(food_data, list): food_data = food_data[0] if food_data else {}
     return {"status": "success", "food": food_data}
 
 @app.post("/api/food/photo")
 async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file: UploadFile = File(...)):
     contents = await file.read()
-    # ДОДАНО: Вимога завжди оцінювати грами по фото і дописувати в назву
     response = model.generate_content(["Analyze food image. Estimate portion size in grams. Return ONLY valid JSON: name(string in Ukrainian, MUST include estimated weight in grams at the end, e.g., 'Салат (200г)'), kcal, protein, fat, carbs (MUST BE NET CARBS ONLY, completely separate from fiber), fiber (calculated completely separately), sugar, salt(numbers). No markdown.", {"mime_type": file.content_type, "data": contents}])
     food_data = json.loads(response.text.strip('` \njson'))
-    save_food_to_db(tg_id, date.fromisoformat(date_str), food_data)
+    if isinstance(food_data, list): food_data = food_data[0] if food_data else {}
     return {"status": "success", "data": food_data}
 
 @app.post("/api/food/barcode")
@@ -238,19 +236,18 @@ def add_food_barcode(req: BarcodeRequest):
             carbs = float(nutriments.get("carbohydrates_100g", 0)) * multiplier
             fiber = float(nutriments.get("fiber_100g", 0)) * multiplier
             
-            # API штрихкодів вже повертає грами, тому ми просто їх прикріплюємо: f"({int(serving)}г)"
             food_data = {"name": f"📱 {name} ({int(serving)}г)", "kcal": kcal, "protein": protein, "fat": fat, "carbs": carbs, "fiber": fiber, "sugar": 0, "salt": 0}
-            save_food_to_db(req.tg_id, req.date, food_data)
             return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
     except:
         pass 
 
-    # ДОДАНО: Для ШІ-резерву при штрихкодах теж вимагаємо вагу
     prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. If unknown, return generic 'Невідомий продукт' with 0 macros. Return ONLY valid JSON: name(string in Ukrainian, MUST include estimated weight in grams, e.g., 'Шоколад (100г)'), kcal, protein, fat, carbs (MUST BE NET CARBS ONLY, completely separate from fiber), fiber (calculated completely separately), sugar, salt(numbers). No markdown."
     response = model.generate_content(prompt)
-    try: food_data = json.loads(response.text.strip('` \njson'))
-    except: food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
-    save_food_to_db(req.tg_id, req.date, food_data)
+    try: 
+        food_data = json.loads(response.text.strip('` \njson'))
+        if isinstance(food_data, list): food_data = food_data[0] if food_data else {}
+    except: 
+        food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
     return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
 
 @app.delete("/api/food/{food_id}")
@@ -276,10 +273,14 @@ def add_water(tg_id: str = Form(...), date_str: str = Form(...), amount: float =
 @app.post("/api/exercise")
 def add_exercise(req: ExerciseRequest):
     db = SessionLocal()
-    user = db.query(User).filter(User.tg_id == req.tg_id).first()
-    weight = user.weight if user and user.weight else 70.0
-    met = ACTIVITIES.get(req.name, 5.0)
-    burned_kcal = met * weight * (req.duration_min / 60.0)
+    if req.custom_kcal is not None and req.custom_kcal > 0:
+        burned_kcal = req.custom_kcal
+    else:
+        user = db.query(User).filter(User.tg_id == req.tg_id).first()
+        weight = user.weight if user and user.weight else 70.0
+        met = ACTIVITIES.get(req.name, 5.0)
+        burned_kcal = met * weight * (req.duration_min / 60.0)
+        
     db.add(ExerciseLog(tg_id=req.tg_id, log_date=req.date, name=req.name, duration_min=req.duration_min, burned_kcal=burned_kcal))
     db.commit(); db.close()
     return {"status": "success", "burned_kcal": burned_kcal}
