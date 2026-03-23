@@ -87,7 +87,7 @@
         .food-macros span { background: rgba(142,142,147,0.1); padding: 4px 8px; border-radius: 6px; color: var(--text-main); font-weight: 500; }
 
         .generic-container { padding: 20px; }
-        .chart-card { background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-top: 20px; }
+        .chart-card { background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-top: 20px; margin-bottom: 20px;}
         
         .recent-food-card { background: var(--card-bg); border-radius: 16px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
         .recent-food-info { display: flex; flex-direction: column; }
@@ -222,6 +222,13 @@
             <p style="color: var(--text-sec); font-size: 15px; margin-bottom: 20px;">Твоя активність за останні 7 днів</p>
             <div class="chart-card">
                 <canvas id="progressChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="generic-container" style="padding-top: 0;">
+            <h2 class="section-title">Графік ваги</h2>
+            <div class="chart-card">
+                <canvas id="weightChart"></canvas>
             </div>
         </div>
     </div>
@@ -423,6 +430,7 @@
         let currentFoods = [];
         let chatHistory = [];
         let chartInstance = null;
+        let weightChartInstance = null; // ДОДАНО
         let cachedRecentFoods = null;
         let html5QrcodeScanner = null;
 
@@ -456,7 +464,10 @@
             const tabEl = document.getElementById(`tab-${tabId}`);
             if (tabEl) tabEl.classList.add('active');
             
-            if (tabId === 'progress') loadProgressChart();
+            if (tabId === 'progress') {
+                loadProgressChart();
+                loadWeightChart(); // ДОДАНО
+            }
             if (tabId === 'meals') loadRecentFoods();
         }
 
@@ -929,6 +940,42 @@
                     datasets: [{ label: 'Спожито ккал', data: data.kcal, backgroundColor: '#007aff', borderRadius: 6 }]
                 },
                 options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(142,142,147,0.1)' } }, x: { grid: { display: false } } } }
+            });
+        }
+
+        // ДОДАНО: Функція завантаження графіка ваги
+        async function loadWeightChart() {
+            const res = await fetch(`${API_BASE}/progress/weight/${userId}`);
+            const data = await res.json();
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            
+            if(weightChartInstance) weightChartInstance.destroy();
+            
+            let labels = data.dates;
+            let weights = data.weights;
+            
+            if (labels.length === 0) {
+                 labels = [formatDate(currentDate)];
+                 let currentWeightText = document.getElementById('ui-weight').innerText;
+                 weights = [currentWeightText !== "--" ? parseFloat(currentWeightText) : 70];
+            }
+
+            weightChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.map(d => d.split('-')[2] + '.' + d.split('-')[1]),
+                    datasets: [{ 
+                        label: 'Вага (кг)', 
+                        data: weights, 
+                        borderColor: '#34c759', 
+                        backgroundColor: 'rgba(52, 199, 89, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#34c759'
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(142,142,147,0.1)' } }, x: { grid: { display: false } } } }
             });
         }
         
