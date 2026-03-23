@@ -111,7 +111,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
 BOT_TOKEN = os.getenv("BOT_TOKEN") 
 # ЗАМІНИ НА ЮЗЕРНЕЙМ СВОГО БОТА (без @)
-BOT_USERNAME = "ТУТ_ЮЗЕРНЕЙМ_ТВОГО_БОТА" 
+BOT_USERNAME = "@fitlio_final_ai_bot" 
 
 def clean_json_response(text):
     try:
