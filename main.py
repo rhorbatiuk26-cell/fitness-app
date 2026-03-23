@@ -235,7 +235,8 @@ def add_food_direct(req: DirectFoodRequest):
 
 @app.post("/api/food/text")
 def add_food_text(req: TextFoodRequest):
-    prompt = f"Calculate exact macros for: '{req.text}'. Assume standard serving in grams if not specified. Return ONLY a valid JSON object (no extra text) with keys: \"name\" (string, include weight in brackets), \"kcal\", \"protein\", \"fat\", \"carbs\", \"fiber\", \"sugar\", \"salt\" (all numbers)."
+    # ДОДАНО: Спеціальна інструкція сумувати всі продукти в один об'єкт
+    prompt = f"Calculate the TOTAL combined exact macros for all items mentioned here: '{req.text}'. If multiple foods/drinks are present, SUM their nutritional values into ONE single object. Combine their names (e.g., 'Вівсянка (200г) + Кава (250мл)'). Assume standard serving in grams if not specified. Return ONLY ONE valid JSON object (no extra text) with keys: \"name\" (string, include weights in brackets), \"kcal\", \"protein\", \"fat\", \"carbs\", \"fiber\", \"sugar\", \"salt\" (all numbers)."
     try:
         response = model.generate_content(prompt)
         food_data = clean_json_response(response.text)
@@ -248,14 +249,14 @@ def add_food_text(req: TextFoodRequest):
             
         return {"status": "success", "food": food_data}
     except Exception as e:
-        # Безпечний резерв, якщо ШІ заплутався
         fallback = {"name": f"{req.text} (помилка ШІ)", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
         return {"status": "success", "food": fallback}
 
 @app.post("/api/food/photo")
 async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file: UploadFile = File(...)):
     contents = await file.read()
-    prompt = "Analyze food image. Estimate portion size in grams. Return ONLY a valid JSON object (no markdown) with keys: \"name\" (string in Ukrainian, include weight in brackets), \"kcal\", \"protein\", \"fat\", \"carbs\", \"fiber\", \"sugar\", \"salt\" (all numbers)."
+    # ДОДАНО: Інструкція сумувати все, що на фото, в один об'єкт
+    prompt = "Analyze food image. If there are multiple items on the plate, combine them into ONE single meal description and SUM their nutritional values. Return ONLY ONE valid JSON object (no markdown) with keys: \"name\" (string in Ukrainian, combine names and include estimated total weight in brackets, e.g., 'Омлет (150г) + Салат (100г)'), \"kcal\", \"protein\", \"fat\", \"carbs\", \"fiber\", \"sugar\", \"salt\" (all numbers)."
     try:
         response = model.generate_content([prompt, {"mime_type": file.content_type, "data": contents}])
         food_data = clean_json_response(response.text)
