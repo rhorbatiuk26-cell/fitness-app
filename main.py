@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Float, Date, desc, text
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.exc import OperationalError
 import google.generativeai as genai
 
 # --- МЕТАБОЛІЧНІ ЕКВІВАЛЕНТИ (MET) ДЛЯ ВПРАВ ---
@@ -45,7 +44,7 @@ class User(Base):
     norm_kcal = Column(Float)
     norm_p = Column(Float)
     norm_f = Column(Float)
-    norm_c = Column(Float)
+    norm_c = Column(Float) # Чисті вуглеводи
     norm_sugar = Column(Float)
     norm_salt = Column(Float)
     norm_fiber = Column(Float, default=28.0)
@@ -63,7 +62,7 @@ class FoodLog(Base):
     kcal = Column(Float)
     protein = Column(Float)
     fat = Column(Float)
-    carbs = Column(Float)
+    carbs = Column(Float) # Чисті вуглеводи
     sugar = Column(Float)
     salt = Column(Float)
     fiber = Column(Float, default=0.0) 
@@ -93,25 +92,26 @@ class WeightLog(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# БЕЗПЕЧНА МІГРАЦІЯ
+# БЕЗПЕЧНА МІГРАЦІЯ (Використовуємо Exception, щоб не падав Postgres на Railway)
 with engine.connect() as conn:
     try: conn.execute(text("ALTER TABLE food_logs ADD COLUMN fiber FLOAT DEFAULT 0.0")); conn.commit()
-    except OperationalError: pass
+    except Exception: pass
     try: conn.execute(text("ALTER TABLE users ADD COLUMN norm_fiber FLOAT DEFAULT 28.0")); conn.commit()
-    except OperationalError: pass
+    except Exception: pass
     try: conn.execute(text("ALTER TABLE users ADD COLUMN subscription_end DATE")); conn.commit()
-    except OperationalError: pass
+    except Exception: pass
     try: conn.execute(text("ALTER TABLE users ADD COLUMN referred_by VARCHAR")); conn.commit()
-    except OperationalError: pass
+    except Exception: pass
 
 app = FastAPI(title="FitLio Pro API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
+
 BOT_TOKEN = os.getenv("BOT_TOKEN") 
-# ЗАМІНИ НА ЮЗЕРНЕЙМ СВОГО БОТА (без @)
-BOT_USERNAME = "@fitlio_final_ai_bot" 
+# ВПИШИ СЮДИ ЮЗЕРНЕЙМ СВОГО БОТА БЕЗ @ (наприклад: "MyFitLio_bot")
+BOT_USERNAME = "fitlio_final_ai_bot" 
 
 def clean_json_response(text):
     try:
@@ -133,7 +133,7 @@ class ExerciseRequest(BaseModel): tg_id: str; date: date; name: str; duration_mi
 class WeightRequest(BaseModel): tg_id: str; date: date; weight: float
 class ChatMessage(BaseModel): tg_id: str; message: str; history: List[Dict[str, str]] = []
 
-# --- ТЕЛЕГРАМ WEBHOOK (ЗАМІНА BOT.PY) ---
+# --- ТЕЛЕГРАМ WEBHOOK ---
 @app.post("/api/webhook/telegram")
 async def telegram_webhook(request: Request):
     if not BOT_TOKEN: return {"ok": True}
@@ -170,9 +170,22 @@ async def telegram_webhook(request: Request):
                 
                 # Кнопка для відкриття Mini App
                 keyboard = {"inline_keyboard": [[{"text": "Відкрити FitLio Pro 🍏", "web_app": {"url": "https://fitness-app-production-b4a3.up.railway.app/"}}]]}
+                
+                # Гарне привітання
+                welcome_text = (
+                    "👋 <b>Вітаю у FitLio Pro!</b>\n\n"
+                    "Я твій розумний AI-щоденник харчування та тренувань. Що я вмію:\n\n"
+                    "📸 <b>Розпізнавати їжу по фото:</b> просто сфотографуй тарілку, а я порахую калорії та БЖВ (включно з чистими вуглеводами та клітковиною).\n"
+                    "🎯 <b>Персональні норми:</b> розрахую твою ідеальну норму для досягнення цілі.\n"
+                    "🏃‍♂️ <b>Трекінг активності:</b> записуй тренування та воду в один клік.\n\n"
+                    "🎁 <i>Тобі автоматично нараховано 3 дні безкоштовного PRO-доступу!</i>\n\n"
+                    "Тисни кнопку нижче, щоб налаштувати свій профіль і почати 👇"
+                )
+                
                 requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
                     "chat_id": tg_id, 
-                    "text": "Привіт! Натисни кнопку нижче, щоб відкрити свій AI-щоденник харчування 👇\n\nТобі нараховано 3 дні безкоштовного доступу!",
+                    "text": welcome_text,
+                    "parse_mode": "HTML",
                     "reply_markup": keyboard
                 })
 
@@ -258,7 +271,7 @@ def grant_lifetime_access(target_tg_id: str):
     db.commit(); db.close()
     return {"status": "success", "message": f"Доступ на 50 років видано для {target_tg_id}"}
 
-# --- ОСНОВНІ ЕНДПОІНТИ (ЯК БУЛО) ---
+# --- ОСНОВНІ ЕНДПОІНТИ ---
 @app.post("/api/profile")
 def update_profile(data: ProfileData):
     db = SessionLocal()
