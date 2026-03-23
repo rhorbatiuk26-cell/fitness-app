@@ -139,7 +139,7 @@
         <div class="header-actions">
             <div class="premium-badge">PRO</div>
             <button class="settings-btn" onclick="openModal('settings-modal')">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </button>
         </div>
     </header>
@@ -290,6 +290,31 @@
         </div>
     </div>
 
+    <div id="confirm-food-modal" class="modal" style="z-index: 2000;">
+        <div class="modal-content">
+            <div class="modal-header">Перевірка ШІ 🤖 <button class="close-btn" onclick="closeModal('confirm-food-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
+            <p style="color: var(--text-sec); font-size: 13px; margin-bottom: 15px;">ШІ міг сплутати інгредієнти. Якщо бачиш помилку в назві (наприклад, замість майонезу — сметана) або в цифрах — просто виправ текст перед збереженням!</p>
+            
+            <div class="form-group">
+                <label style="color: var(--accent);">✏️ Що це насправді? (Назва і вага)</label>
+                <input type="text" id="cf-name" placeholder="Наприклад: Сметана (50г)">
+            </div>
+            
+            <div class="form-group"><label>Калорії (ккал)</label><input type="number" id="cf-kcal"></div>
+            
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>Білки (г)</label><input type="number" id="cf-p"></div>
+                <div class="form-group" style="flex: 1;"><label>Жири (г)</label><input type="number" id="cf-f"></div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>Вугл. (г)</label><input type="number" id="cf-c"></div>
+                <div class="form-group" style="flex: 1;"><label>Клітк. (г)</label><input type="number" id="cf-fib"></div>
+            </div>
+            
+            <button class="btn-primary" onclick="saveConfirmedFood()">✅ Все правильно, зберегти</button>
+        </div>
+    </div>
+
     <div id="add-food-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">Додати їжу <button class="close-btn" onclick="closeModal('add-food-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
@@ -368,7 +393,8 @@
     </div>
 
     <script>
-        const API_BASE = "https://fitness-app-production-b4a3.up.railway.app/api";
+        // 🛑 УВАГА: ВСТАВ СЮДИ СВОЄ ПОСИЛАННЯ З RAILWAY 🛑
+        const API_BASE = "https://fitness-app-production-b4a3.up.railway.app/api"; 
         
         let tg = window.Telegram.WebApp;
         tg.expand();
@@ -418,7 +444,6 @@
             if (tabId === 'meals') loadRecentFoods();
         }
 
-        // ОНОВЛЕНА ФУНКЦІЯ ДАТИ (ВИПРАВЛЕНО БАГ ЧАСОВИХ ПОЯСІВ)
         function formatDate(d) { 
             const year = d.getFullYear();
             const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -631,8 +656,7 @@
                             
                             if (data.status === 'success') {
                                 tg.HapticFeedback.notificationOccurred('success');
-                                showToast(`Додано: ${data.name}`); 
-                                fetchDailyData();
+                                openConfirmModal(data.food); 
                             } else {
                                 tg.HapticFeedback.notificationOccurred('error');
                                 showToast("Продукт не знайдено в базі."); 
@@ -708,8 +732,86 @@
             }); 
         }
 
-        function addFoodText() { const text = document.getElementById('food-text').value; if(text) { actionWithLoader('food-loader', 'add-food-modal', '/food/text', { tg_id: userId, date: formatDate(currentDate), text: text }); document.getElementById('food-text').value=''; } }
-        function addFoodPhoto() { const file = document.getElementById('food-photo').files[0]; if(file){ const fd = new FormData(); fd.append('tg_id', userId); fd.append('date_str', formatDate(currentDate)); fd.append('file', file); actionWithLoader('food-loader', 'add-food-modal', '/food/photo', fd, true); document.getElementById('food-photo').value=''; } }
+        function openConfirmModal(foodData) {
+            document.getElementById('cf-name').value = foodData.name || '';
+            document.getElementById('cf-kcal').value = Math.round(foodData.kcal || 0);
+            document.getElementById('cf-p').value = Math.round(foodData.protein || 0);
+            document.getElementById('cf-f').value = Math.round(foodData.fat || 0);
+            document.getElementById('cf-c').value = Math.round(foodData.carbs || 0);
+            document.getElementById('cf-fib').value = Math.round(foodData.fiber || 0);
+            openModal('confirm-food-modal');
+        }
+
+        async function saveConfirmedFood() {
+            const foodObj = {
+                name: document.getElementById('cf-name').value,
+                kcal: parseFloat(document.getElementById('cf-kcal').value) || 0,
+                protein: parseFloat(document.getElementById('cf-p').value) || 0,
+                fat: parseFloat(document.getElementById('cf-f').value) || 0,
+                carbs: parseFloat(document.getElementById('cf-c').value) || 0,
+                fiber: parseFloat(document.getElementById('cf-fib').value) || 0,
+                sugar: 0, salt: 0
+            };
+            
+            closeModal('confirm-food-modal');
+            
+            await fetch(`${API_BASE}/food/direct`, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), food: foodObj })
+            });
+            
+            showToast("✅ Збережено!");
+            fetchDailyData();
+            cachedRecentFoods = null;
+        }
+
+        async function addFoodText() { 
+            const text = document.getElementById('food-text').value; 
+            if(!text) return;
+            
+            document.getElementById('food-loader').style.display = 'block';
+            try {
+                const res = await fetch(`${API_BASE}/food/text`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), text: text })
+                });
+                const data = await res.json();
+                document.getElementById('food-loader').style.display = 'none';
+                document.getElementById('food-text').value = '';
+                closeModal('add-food-modal');
+                
+                openConfirmModal(data.food); 
+            } catch(e) {
+                document.getElementById('food-loader').style.display = 'none';
+                showToast("Помилка");
+            }
+        }
+
+        async function addFoodPhoto() { 
+            const file = document.getElementById('food-photo').files[0]; 
+            if(!file) return;
+            
+            document.getElementById('food-loader').style.display = 'block';
+            const fd = new FormData(); 
+            fd.append('tg_id', userId); 
+            fd.append('date_str', formatDate(currentDate)); 
+            fd.append('file', file); 
+            
+            try {
+                const res = await fetch(`${API_BASE}/food/photo`, { method: 'POST', body: fd });
+                const data = await res.json();
+                document.getElementById('food-loader').style.display = 'none';
+                document.getElementById('food-photo').value = '';
+                closeModal('add-food-modal');
+                
+                openConfirmModal(data.data || data.food); 
+            } catch(e) {
+                document.getElementById('food-loader').style.display = 'none';
+                showToast("Помилка");
+            }
+        }
+
         async function addWater() { const fd = new FormData(); fd.append('tg_id', userId); fd.append('date_str', formatDate(currentDate)); fd.append('amount', 250); await fetch(`${API_BASE}/water`, { method: 'POST', body: fd }); showToast("+ 250мл 💧"); fetchDailyData(); }
 
         function showDrilldown(title, macroKey) {
@@ -791,7 +893,6 @@
             fetchDailyData(); 
         }
         
-        // --- АВТО-ПЕРЕМИКАННЯ ДНЯ ПІСЛЯ 00:00 ---
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === 'visible') {
                 let actualToday = new Date();
