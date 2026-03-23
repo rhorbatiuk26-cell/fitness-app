@@ -7,7 +7,7 @@ from pathlib import Path
 from datetime import date, timedelta, datetime
 from typing import List, Optional, Dict
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Float, Date, desc, text
@@ -45,10 +45,14 @@ class User(Base):
     norm_kcal = Column(Float)
     norm_p = Column(Float)
     norm_f = Column(Float)
-    norm_c = Column(Float) # Це тепер завжди ЧИСТІ вуглеводи
+    norm_c = Column(Float)
     norm_sugar = Column(Float)
     norm_salt = Column(Float)
     norm_fiber = Column(Float, default=28.0)
+    
+    # --- МОНЕТИЗАЦІЯ ---
+    subscription_end = Column(Date, default=lambda: (datetime.now() + timedelta(days=3)).date())
+    referred_by = Column(String, nullable=True)
 
 class FoodLog(Base):
     __tablename__ = "food_logs"
@@ -59,7 +63,7 @@ class FoodLog(Base):
     kcal = Column(Float)
     protein = Column(Float)
     fat = Column(Float)
-    carbs = Column(Float) # Це тепер завжди ЧИСТІ вуглеводи
+    carbs = Column(Float)
     sugar = Column(Float)
     salt = Column(Float)
     fiber = Column(Float, default=0.0) 
@@ -91,14 +95,13 @@ Base.metadata.create_all(bind=engine)
 
 # БЕЗПЕЧНА МІГРАЦІЯ
 with engine.connect() as conn:
-    try:
-        conn.execute(text("ALTER TABLE food_logs ADD COLUMN fiber FLOAT DEFAULT 0.0"))
-        conn.commit()
+    try: conn.execute(text("ALTER TABLE food_logs ADD COLUMN fiber FLOAT DEFAULT 0.0")); conn.commit()
     except OperationalError: pass
-    
-    try:
-        conn.execute(text("ALTER TABLE users ADD COLUMN norm_fiber FLOAT DEFAULT 28.0"))
-        conn.commit()
+    try: conn.execute(text("ALTER TABLE users ADD COLUMN norm_fiber FLOAT DEFAULT 28.0")); conn.commit()
+    except OperationalError: pass
+    try: conn.execute(text("ALTER TABLE users ADD COLUMN subscription_end DATE")); conn.commit()
+    except OperationalError: pass
+    try: conn.execute(text("ALTER TABLE users ADD COLUMN referred_by VARCHAR")); conn.commit()
     except OperationalError: pass
 
 app = FastAPI(title="FitLio Pro API")
@@ -107,6 +110,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
 BOT_TOKEN = os.getenv("BOT_TOKEN") 
+# ЗАМІНИ НА ЮЗЕРНЕЙМ СВОГО БОТА (без @)
+BOT_USERNAME = "ТУТ_ЮЗЕРНЕЙМ_ТВОГО_БОТА" 
 
 def clean_json_response(text):
     try:
@@ -128,10 +133,135 @@ class ExerciseRequest(BaseModel): tg_id: str; date: date; name: str; duration_mi
 class WeightRequest(BaseModel): tg_id: str; date: date; weight: float
 class ChatMessage(BaseModel): tg_id: str; message: str; history: List[Dict[str, str]] = []
 
+# --- ТЕЛЕГРАМ WEBHOOK (ЗАМІНА BOT.PY) ---
+@app.post("/api/webhook/telegram")
+async def telegram_webhook(request: Request):
+    if not BOT_TOKEN: return {"ok": True}
+    
+    try:
+        update = await request.json()
+        db = SessionLocal()
+        
+        # 1. Запит перед оплатою (Telegram Stars)
+        if "pre_checkout_query" in update:
+            pq_id = update["pre_checkout_query"]["id"]
+            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", json={"pre_checkout_query_id": pq_id, "ok": True})
+            db.close()
+            return {"ok": True}
+            
+        # 2. Обробка повідомлень
+        if "message" in update:
+            msg = update["message"]
+            tg_id = str(msg.get("from", {}).get("id"))
+            text = msg.get("text", "")
+            
+            # А) Старт та реферальна система
+            if text.startswith("/start"):
+                parts = text.split()
+                ref_id = parts[1] if len(parts) > 1 else None
+                
+                user = db.query(User).filter(User.tg_id == tg_id).first()
+                if not user:
+                    user = User(tg_id=tg_id, referred_by=ref_id, subscription_end=date.today() + timedelta(days=3))
+                    db.add(user)
+                elif not user.referred_by and ref_id and ref_id != tg_id:
+                    user.referred_by = ref_id
+                db.commit()
+                
+                # Кнопка для відкриття Mini App
+                keyboard = {"inline_keyboard": [[{"text": "Відкрити FitLio Pro 🍏", "web_app": {"url": "https://fitness-app-production-b4a3.up.railway.app/"}}]]}
+                requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
+                    "chat_id": tg_id, 
+                    "text": "Привіт! Натисни кнопку нижче, щоб відкрити свій AI-щоденник харчування 👇\n\nТобі нараховано 3 дні безкоштовного доступу!",
+                    "reply_markup": keyboard
+                })
+
+            # Б) Успішна оплата (100 Stars)
+            if "successful_payment" in msg:
+                user = db.query(User).filter(User.tg_id == tg_id).first()
+                if user:
+                    today = date.today()
+                    # Нараховуємо 30 днів тому, хто купив
+                    if user.subscription_end and user.subscription_end > today:
+                        user.subscription_end += timedelta(days=30)
+                    else:
+                        user.subscription_end = today + timedelta(days=30)
+                        
+                    # Нараховуємо 7 днів рефоводу
+                    if user.referred_by:
+                        referrer = db.query(User).filter(User.tg_id == user.referred_by).first()
+                        if referrer:
+                            if referrer.subscription_end and referrer.subscription_end > today:
+                                referrer.subscription_end += timedelta(days=7)
+                            else:
+                                referrer.subscription_end = today + timedelta(days=7)
+                            
+                            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
+                                "chat_id": referrer.tg_id, "text": "🎁 Твій друг щойно оплатив підписку! Тобі нараховано +7 днів до FitLio Pro безкоштовно!"
+                            })
+                    db.commit()
+                    requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
+                        "chat_id": tg_id, "text": "🎉 Оплата успішна! Ти отримав 1 місяць доступу. Заходь у додаток!"
+                    })
+        db.close()
+    except Exception as e:
+        print("Webhook Error:", e)
+        
+    return {"ok": True}
+
+# --- ЕНДПОІНТИ ПІДПИСКИ ТА ОПЛАТИ ---
+@app.get("/api/subscription/{tg_id}")
+def get_subscription(tg_id: str):
+    db = SessionLocal()
+    user = db.query(User).filter(User.tg_id == tg_id).first()
+    
+    if not user:
+        db.close()
+        return {"is_active": True, "days_left": 3, "ref_link": f"https://t.me/{BOT_USERNAME}?start={tg_id}"}
+        
+    today = date.today()
+    if not user.subscription_end:
+        user.subscription_end = today + timedelta(days=3)
+        db.commit()
+        
+    days_left = (user.subscription_end - today).days
+    is_active = days_left >= 0
+    
+    db.close()
+    return {
+        "is_active": is_active, 
+        "days_left": max(0, days_left), 
+        "end_date": user.subscription_end.strftime("%d.%m.%Y"),
+        "ref_link": f"https://t.me/{BOT_USERNAME}?start={tg_id}"
+    }
+
+@app.get("/api/invoice/stars/{tg_id}")
+def get_stars_invoice(tg_id: str):
+    if not BOT_TOKEN: return {"status": "error", "message": "BOT_TOKEN not set"}
+        
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
+    payload = {
+        "title": "FitLio Pro - 1 місяць", "description": "Повний доступ до AI-дієтолога",
+        "payload": f"sub_{tg_id}", "currency": "XTR", "prices": [{"label": "Місяць", "amount": 100}]
+    }
+    resp = requests.post(url, json=payload).json()
+    if resp.get("ok"): return {"status": "success", "invoice_url": resp["result"]}
+    else: return {"status": "error", "message": resp.get("description")}
+
+@app.get("/api/admin/grant/{target_tg_id}")
+def grant_lifetime_access(target_tg_id: str):
+    db = SessionLocal()
+    user = db.query(User).filter(User.tg_id == target_tg_id).first()
+    if not user:
+        user = User(tg_id=target_tg_id); db.add(user)
+    user.subscription_end = date.today() + timedelta(days=18250)
+    db.commit(); db.close()
+    return {"status": "success", "message": f"Доступ на 50 років видано для {target_tg_id}"}
+
+# --- ОСНОВНІ ЕНДПОІНТИ (ЯК БУЛО) ---
 @app.post("/api/profile")
 def update_profile(data: ProfileData):
     db = SessionLocal()
-    # Промпт: Явно вказуємо, що норма вуглеводів має бути ЧИСТИМИ вуглеводами
     prompt = f"Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}. Limits: Sugar up to 50g, Salt up to 5g. Return ONLY a valid JSON with keys: kcal, protein, fat, carbs (MUST BE STRICTLY NET CARBS, total carbs minus fiber), sugar, salt, fiber (calculate separately, approx 14g per 1000 kcal)."
     try:
         response = model.generate_content(prompt)
@@ -198,11 +328,8 @@ def get_weight_progress(tg_id: str):
     end_date = date.today()
     start_date = end_date - timedelta(days=30)
     logs = db.query(WeightLog).filter(WeightLog.tg_id == tg_id, WeightLog.log_date >= start_date, WeightLog.log_date <= end_date).order_by(WeightLog.log_date).all()
-    
     weight_dict = {}
-    for w in logs:
-        weight_dict[w.log_date.strftime("%Y-%m-%d")] = w.weight
-        
+    for w in logs: weight_dict[w.log_date.strftime("%Y-%m-%d")] = w.weight
     db.close()
     return {"dates": list(weight_dict.keys()), "weights": list(weight_dict.values())}
 
@@ -231,42 +358,28 @@ def add_food_direct(req: DirectFoodRequest):
 
 @app.post("/api/food/text")
 def add_food_text(req: TextFoodRequest):
-    # Промпт: Строго вимагаємо ЧИСТІ вуглеводи з прикладом про авокадо
-    prompt = f"Calculate the TOTAL combined exact macros for all items mentioned here: '{req.text}'. If multiple foods/drinks are present, SUM their nutritional values into ONE single object. Combine their names (e.g., 'Вівсянка (200г) + Кава (250мл)'). Assume standard serving in grams if not specified. Return ONLY ONE valid JSON object (no extra text) with keys: \"name\" (string, include weights in brackets), \"kcal\", \"protein\", \"fat\", \"carbs\" (MUST BE STRICTLY NET CARBS. E.g. if avocado has 9g total carbs and 7g fiber, return 2 for carbs), \"fiber\", \"sugar\", \"salt\" (all numbers)."
+    prompt = f"Calculate the TOTAL combined exact macros for all items mentioned here: '{req.text}'. SUM their nutritional values into ONE single object. Combine names (e.g., 'Вівсянка (200г) + Кава'). Return ONLY ONE valid JSON object with keys: \"name\" (string, with weights), \"kcal\", \"protein\", \"fat\", \"carbs\" (MUST BE STRICTLY NET CARBS. E.g. if avocado has 9g total carbs and 7g fiber, return 2 for carbs), \"fiber\", \"sugar\", \"salt\" (numbers)."
     try:
         response = model.generate_content(prompt)
         food_data = clean_json_response(response.text)
-        
-        if isinstance(food_data, list): 
-            food_data = food_data[0] if food_data else None
-            
-        if not food_data:
-            raise Exception("Invalid JSON returned from AI")
-            
+        if isinstance(food_data, list): food_data = food_data[0] if food_data else None
+        if not food_data: raise Exception("Invalid JSON")
         return {"status": "success", "food": food_data}
-    except Exception as e:
-        fallback = {"name": f"{req.text} (помилка ШІ)", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
-        return {"status": "success", "food": fallback}
+    except:
+        return {"status": "success", "food": {"name": f"{req.text} (помилка ШІ)", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}}
 
 @app.post("/api/food/photo")
 async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file: UploadFile = File(...)):
     contents = await file.read()
-    # Промпт: Строго вимагаємо ЧИСТІ вуглеводи з прикладом
-    prompt = "Analyze food image. If there are multiple items on the plate, combine them into ONE single meal description and SUM their nutritional values. Return ONLY ONE valid JSON object (no markdown) with keys: \"name\" (string in Ukrainian, combine names and include estimated total weight in brackets, e.g., 'Омлет (150г) + Салат (100г)'), \"kcal\", \"protein\", \"fat\", \"carbs\" (MUST BE STRICTLY NET CARBS: Total carbs minus fiber), \"fiber\", \"sugar\", \"salt\" (all numbers)."
+    prompt = "Analyze food image. Combine into ONE single meal description and SUM nutritional values. Return ONLY ONE valid JSON object with keys: \"name\" (string in Ukrainian, combine names and weight), \"kcal\", \"protein\", \"fat\", \"carbs\" (MUST BE STRICTLY NET CARBS: Total carbs minus fiber), \"fiber\", \"sugar\", \"salt\" (numbers)."
     try:
         response = model.generate_content([prompt, {"mime_type": file.content_type, "data": contents}])
         food_data = clean_json_response(response.text)
-        
-        if isinstance(food_data, list): 
-            food_data = food_data[0] if food_data else None
-            
-        if not food_data:
-            raise Exception("Invalid JSON returned from AI")
-            
+        if isinstance(food_data, list): food_data = food_data[0] if food_data else None
+        if not food_data: raise Exception("Invalid JSON")
         return {"status": "success", "data": food_data}
-    except Exception as e:
-        fallback = {"name": "Не вдалося розпізнати", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
-        return {"status": "success", "data": fallback}
+    except:
+        return {"status": "success", "data": {"name": "Не вдалося розпізнати", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}}
 
 @app.post("/api/food/barcode")
 def add_food_barcode(req: BarcodeRequest):
@@ -279,104 +392,76 @@ def add_food_barcode(req: BarcodeRequest):
             serving = float(product.get("serving_quantity", 100))
             multiplier = serving / 100.0
             nutriments = product.get("nutriments", {})
-            
             kcal = float(nutriments.get("energy-kcal_100g", 0)) * multiplier
             protein = float(nutriments.get("proteins_100g", 0)) * multiplier
             fat = float(nutriments.get("fat_100g", 0)) * multiplier
-            
-            # Віднімаємо клітковину від загальних вуглеводів, щоб отримати чисті
             total_carbs = float(nutriments.get("carbohydrates_100g", 0)) * multiplier
             fiber = float(nutriments.get("fiber_100g", 0)) * multiplier
-            net_carbs = max(0, total_carbs - fiber) # Захист від від'ємних значень
-            
-            food_data = {"name": f"📱 {name} ({int(serving)}г)", "kcal": kcal, "protein": protein, "fat": fat, "carbs": net_carbs, "fiber": fiber, "sugar": 0, "salt": 0}
-            return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
-    except:
-        pass 
-
-    prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. Return ONLY valid JSON: name(string in Ukrainian, MUST include estimated weight in grams), kcal, protein, fat, carbs(MUST BE NET CARBS: total minus fiber), fiber, sugar, salt(numbers)."
+            net_carbs = max(0, total_carbs - fiber)
+            return {"status": "success", "name": f"📱 {name} ({int(serving)}г)", "kcal": kcal, "food": {"name": f"📱 {name} ({int(serving)}г)", "kcal": kcal, "protein": protein, "fat": fat, "carbs": net_carbs, "fiber": fiber, "sugar": 0, "salt": 0}}
+    except: pass 
+    prompt = f"User scanned a barcode: {req.barcode}. Return valid JSON: name(string in Ukrainian with weight), kcal, protein, fat, carbs(NET CARBS), fiber, sugar, salt(numbers)."
     try: 
-        response = model.generate_content(prompt)
-        food_data = clean_json_response(response.text)
+        response = model.generate_content(prompt); food_data = clean_json_response(response.text)
         if isinstance(food_data, list): food_data = food_data[0] if food_data else None
         if not food_data: raise Exception()
-    except: 
-        food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
+    except: food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
     return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
 
 @app.delete("/api/food/{food_id}")
 def delete_food(food_id: int):
-    db = SessionLocal()
-    db.query(FoodLog).filter(FoodLog.id == food_id).delete(); db.commit(); db.close()
+    db = SessionLocal(); db.query(FoodLog).filter(FoodLog.id == food_id).delete(); db.commit(); db.close()
     return {"status": "success"}
 
 @app.delete("/api/exercise/{exercise_id}")
 def delete_exercise(exercise_id: int):
-    db = SessionLocal()
-    db.query(ExerciseLog).filter(ExerciseLog.id == exercise_id).delete()
-    db.commit()
-    db.close()
+    db = SessionLocal(); db.query(ExerciseLog).filter(ExerciseLog.id == exercise_id).delete(); db.commit(); db.close()
     return {"status": "success"}
 
 @app.post("/api/water")
 def add_water(tg_id: str = Form(...), date_str: str = Form(...), amount: float = Form(...)):
-    db = SessionLocal()
-    db.add(WaterLog(tg_id=tg_id, log_date=date.fromisoformat(date_str), amount_ml=amount)); db.commit(); db.close()
+    db = SessionLocal(); db.add(WaterLog(tg_id=tg_id, log_date=date.fromisoformat(date_str), amount_ml=amount)); db.commit(); db.close()
     return {"status": "success"}
 
 @app.post("/api/exercise")
 def add_exercise(req: ExerciseRequest):
     db = SessionLocal()
-    if req.custom_kcal is not None and req.custom_kcal > 0:
-        burned_kcal = req.custom_kcal
+    if req.custom_kcal is not None and req.custom_kcal > 0: burned_kcal = req.custom_kcal
     else:
         user = db.query(User).filter(User.tg_id == req.tg_id).first()
         weight = user.weight if user and user.weight else 70.0
-        met = ACTIVITIES.get(req.name, 5.0)
-        burned_kcal = met * weight * (req.duration_min / 60.0)
-        
+        burned_kcal = ACTIVITIES.get(req.name, 5.0) * weight * (req.duration_min / 60.0)
     db.add(ExerciseLog(tg_id=req.tg_id, log_date=req.date, name=req.name, duration_min=req.duration_min, burned_kcal=burned_kcal))
     db.commit(); db.close()
     return {"status": "success", "burned_kcal": burned_kcal}
 
 @app.post("/api/weight")
 def update_weight(req: WeightRequest):
-    db = SessionLocal()
-    user = db.query(User).filter(User.tg_id == req.tg_id).first()
+    db = SessionLocal(); user = db.query(User).filter(User.tg_id == req.tg_id).first()
     if user: user.weight = req.weight
-    db.add(WeightLog(tg_id=req.tg_id, log_date=req.date, weight=req.weight))
-    db.commit(); db.close()
+    db.add(WeightLog(tg_id=req.tg_id, log_date=req.date, weight=req.weight)); db.commit(); db.close()
     return {"status": "success"}
 
 @app.post("/api/chat")
 def ai_chat(req: ChatMessage):
     context = "\n".join([f"{msg['role']}: {msg['text']}" for msg in req.history[-6:]])
     prompt = f"Ти професійний дієтолог FitLio. Контекст розмови:\n{context}\nКористувач каже: {req.message}. Дай коротку і корисну відповідь українською."
-    response = model.generate_content(prompt)
-    return {"reply": response.text}
+    return {"reply": model.generate_content(prompt).text}
 
 async def smart_reminders_task():
     while True:
         now = datetime.now()
-        if now.hour == 20 and now.minute == 0:
-            if BOT_TOKEN:
-                db = SessionLocal()
-                today = date.today()
-                users = db.query(User).all()
-                for user in users:
-                    water_logs = db.query(WaterLog).filter(WaterLog.tg_id == user.tg_id, WaterLog.log_date == today).all()
-                    total_water = sum([w.amount_ml for w in water_logs])
-                    if total_water < 2000:
-                        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-                        payload = {"chat_id": user.tg_id, "text": "💧 Гей! Ти сьогодні випив мало води. Час зробити ковток!"}
-                        try: requests.post(url, json=payload, timeout=5)
-                        except: pass
-                db.close()
+        if now.hour == 20 and now.minute == 0 and BOT_TOKEN:
+            db = SessionLocal()
+            for user in db.query(User).all():
+                if sum([w.amount_ml for w in db.query(WaterLog).filter(WaterLog.tg_id == user.tg_id, WaterLog.log_date == date.today()).all()]) < 2000:
+                    try: requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": user.tg_id, "text": "💧 Гей! Ти сьогодні випив мало води. Час зробити ковток!"}, timeout=5)
+                    except: pass
+            db.close()
         await asyncio.sleep(60)
 
 @app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(smart_reminders_task())
+async def startup_event(): asyncio.create_task(smart_reminders_task())
 
 if __name__ == "__main__":
     import uvicorn
