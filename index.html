@@ -293,14 +293,11 @@
     <div id="confirm-food-modal" class="modal" style="z-index: 2000;">
         <div class="modal-content">
             <div class="modal-header">Перевірка ШІ 🤖 <button class="close-btn" onclick="closeModal('confirm-food-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
-            <p style="color: var(--text-sec); font-size: 13px; margin-bottom: 15px;">Якщо ШІ помилився або ти хочеш змінити вагу — напиши правильний варіант і натисни 🔄 для перерахунку!</p>
+            <p style="color: var(--text-sec); font-size: 13px; margin-bottom: 15px;">ШІ міг сплутати інгредієнти. Якщо бачиш помилку в назві (наприклад, замість майонезу — сметана) або в цифрах — просто виправ текст перед збереженням!</p>
             
             <div class="form-group">
                 <label style="color: var(--accent);">✏️ Що це насправді? (Назва і вага)</label>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="cf-name" placeholder="Наприклад: Сметана (50г)">
-                    <button id="btn-recalc" class="btn-primary" style="margin: 0; width: 55px; height: 50px; padding: 0; display: flex; justify-content: center; align-items: center; font-size: 20px;" onclick="recalculateMacros()">🔄</button>
-                </div>
+                <input type="text" id="cf-name" placeholder="Наприклад: Сметана (50г)">
             </div>
             
             <div class="form-group"><label>Калорії (ккал)</label><input type="number" id="cf-kcal"></div>
@@ -396,6 +393,7 @@
     </div>
 
     <script>
+        // 🛑 УВАГА: ВСТАВ СЮДИ СВОЄ ПОСИЛАННЯ З RAILWAY 🛑
         const API_BASE = "https://fitness-app-production-b4a3.up.railway.app/api"; 
         
         let tg = window.Telegram.WebApp;
@@ -658,7 +656,7 @@
                             
                             if (data.status === 'success') {
                                 tg.HapticFeedback.notificationOccurred('success');
-                                openConfirmModal(data.food || data); 
+                                openConfirmModal(data.food); 
                             } else {
                                 tg.HapticFeedback.notificationOccurred('error');
                                 showToast("Продукт не знайдено в базі."); 
@@ -734,7 +732,6 @@
             }); 
         }
 
-        // --- НОВІ ФУНКЦІЇ ДЛЯ ПЕРЕВІРКИ ТА ПЕРЕРАХУНКУ ШІ ---
         function openConfirmModal(foodData) {
             document.getElementById('cf-name').value = foodData.name || '';
             document.getElementById('cf-kcal').value = Math.round(foodData.kcal || 0);
@@ -767,40 +764,6 @@
             showToast("✅ Збережено!");
             fetchDailyData();
             cachedRecentFoods = null;
-        }
-
-        async function recalculateMacros() {
-            const text = document.getElementById('cf-name').value;
-            if (!text) return;
-            
-            const btn = document.getElementById('btn-recalc');
-            btn.innerHTML = '⏳';
-            btn.disabled = true;
-
-            try {
-                const res = await fetch(`${API_BASE}/food/text`, {
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), text: text })
-                });
-                const data = await res.json();
-                
-                if (data.status === 'success' && data.food) {
-                    document.getElementById('cf-name').value = data.food.name || text;
-                    document.getElementById('cf-kcal').value = Math.round(data.food.kcal || 0);
-                    document.getElementById('cf-p').value = Math.round(data.food.protein || 0);
-                    document.getElementById('cf-f').value = Math.round(data.food.fat || 0);
-                    document.getElementById('cf-c').value = Math.round(data.food.carbs || 0);
-                    document.getElementById('cf-fib').value = Math.round(data.food.fiber || 0);
-                    tg.HapticFeedback.notificationOccurred('success');
-                    showToast("🔄 Успішно перераховано!");
-                }
-            } catch(e) {
-                showToast("Помилка зв'язку з ШІ");
-            } finally {
-                btn.innerHTML = '🔄';
-                btn.disabled = false;
-            }
         }
 
         async function addFoodText() { 
