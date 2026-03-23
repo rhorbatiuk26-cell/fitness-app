@@ -45,7 +45,7 @@ class User(Base):
     norm_kcal = Column(Float)
     norm_p = Column(Float)
     norm_f = Column(Float)
-    norm_c = Column(Float)
+    norm_c = Column(Float) # Це тепер завжди ЧИСТІ вуглеводи
     norm_sugar = Column(Float)
     norm_salt = Column(Float)
     norm_fiber = Column(Float, default=28.0)
@@ -59,7 +59,7 @@ class FoodLog(Base):
     kcal = Column(Float)
     protein = Column(Float)
     fat = Column(Float)
-    carbs = Column(Float)
+    carbs = Column(Float) # Це тепер завжди ЧИСТІ вуглеводи
     sugar = Column(Float)
     salt = Column(Float)
     fiber = Column(Float, default=0.0) 
@@ -108,21 +108,17 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
 BOT_TOKEN = os.getenv("BOT_TOKEN") 
 
-# --- ДОДАНО: Надійний парсер JSON ---
 def clean_json_response(text):
     try:
-        # Спочатку пробуємо просто почистити стандартні теги
         clean_text = text.replace('```json', '').replace('```', '').strip()
         return json.loads(clean_text)
     except:
-        # Якщо не вийшло, шукаємо перший-ліпший JSON об'єкт через регулярку
         match = re.search(r'(\{.*?\}|\[.*?\])', text, re.DOTALL)
         if match:
             try: return json.loads(match.group(1))
             except: pass
     return None
 
-# --- Схеми ---
 class ProfileData(BaseModel): tg_id: str; goal: str; weight: float; target_weight: float; height: float; age: int
 class ManualNorms(BaseModel): tg_id: str; kcal: float; protein: float; fat: float; carbs: float; sugar: float; salt: float; fiber: float
 class TextFoodRequest(BaseModel): tg_id: str; date: date; text: str
@@ -132,11 +128,11 @@ class ExerciseRequest(BaseModel): tg_id: str; date: date; name: str; duration_mi
 class WeightRequest(BaseModel): tg_id: str; date: date; weight: float
 class ChatMessage(BaseModel): tg_id: str; message: str; history: List[Dict[str, str]] = []
 
-# --- Ендпоінти ---
 @app.post("/api/profile")
 def update_profile(data: ProfileData):
     db = SessionLocal()
-    prompt = f"Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}. Limits: Sugar up to 50g, Salt up to 5g. Return ONLY a valid JSON with keys: kcal, protein, fat, carbs (MUST BE NET CARBS, excluding fiber), sugar, salt, fiber (calculate separately, approx 14g per 1000 kcal)."
+    # Промпт: Явно вказуємо, що норма вуглеводів має бути ЧИСТИМИ вуглеводами
+    prompt = f"Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}. Limits: Sugar up to 50g, Salt up to 5g. Return ONLY a valid JSON with keys: kcal, protein, fat, carbs (MUST BE STRICTLY NET CARBS, total carbs minus fiber), sugar, salt, fiber (calculate separately, approx 14g per 1000 kcal)."
     try:
         response = model.generate_content(prompt)
         norms = clean_json_response(response.text) or {"kcal": 2000, "protein": 100, "fat": 60, "carbs": 200, "sugar": 50, "salt": 5, "fiber": 28}
@@ -235,8 +231,8 @@ def add_food_direct(req: DirectFoodRequest):
 
 @app.post("/api/food/text")
 def add_food_text(req: TextFoodRequest):
-    # ДОДАНО: Спеціальна інструкція сумувати всі продукти в один об'єкт
-    prompt = f"Calculate the TOTAL combined exact macros for all items mentioned here: '{req.text}'. If multiple foods/drinks are present, SUM their nutritional values into ONE single object. Combine their names (e.g., 'Вівсянка (200г) + Кава (250мл)'). Assume standard serving in grams if not specified. Return ONLY ONE valid JSON object (no extra text) with keys: \"name\" (string, include weights in brackets), \"kcal\", \"protein\", \"fat\", \"carbs\", \"fiber\", \"sugar\", \"salt\" (all numbers)."
+    # Промпт: Строго вимагаємо ЧИСТІ вуглеводи з прикладом про авокадо
+    prompt = f"Calculate the TOTAL combined exact macros for all items mentioned here: '{req.text}'. If multiple foods/drinks are present, SUM their nutritional values into ONE single object. Combine their names (e.g., 'Вівсянка (200г) + Кава (250мл)'). Assume standard serving in grams if not specified. Return ONLY ONE valid JSON object (no extra text) with keys: \"name\" (string, include weights in brackets), \"kcal\", \"protein\", \"fat\", \"carbs\" (MUST BE STRICTLY NET CARBS. E.g. if avocado has 9g total carbs and 7g fiber, return 2 for carbs), \"fiber\", \"sugar\", \"salt\" (all numbers)."
     try:
         response = model.generate_content(prompt)
         food_data = clean_json_response(response.text)
@@ -255,8 +251,8 @@ def add_food_text(req: TextFoodRequest):
 @app.post("/api/food/photo")
 async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file: UploadFile = File(...)):
     contents = await file.read()
-    # ДОДАНО: Інструкція сумувати все, що на фото, в один об'єкт
-    prompt = "Analyze food image. If there are multiple items on the plate, combine them into ONE single meal description and SUM their nutritional values. Return ONLY ONE valid JSON object (no markdown) with keys: \"name\" (string in Ukrainian, combine names and include estimated total weight in brackets, e.g., 'Омлет (150г) + Салат (100г)'), \"kcal\", \"protein\", \"fat\", \"carbs\", \"fiber\", \"sugar\", \"salt\" (all numbers)."
+    # Промпт: Строго вимагаємо ЧИСТІ вуглеводи з прикладом
+    prompt = "Analyze food image. If there are multiple items on the plate, combine them into ONE single meal description and SUM their nutritional values. Return ONLY ONE valid JSON object (no markdown) with keys: \"name\" (string in Ukrainian, combine names and include estimated total weight in brackets, e.g., 'Омлет (150г) + Салат (100г)'), \"kcal\", \"protein\", \"fat\", \"carbs\" (MUST BE STRICTLY NET CARBS: Total carbs minus fiber), \"fiber\", \"sugar\", \"salt\" (all numbers)."
     try:
         response = model.generate_content([prompt, {"mime_type": file.content_type, "data": contents}])
         food_data = clean_json_response(response.text)
@@ -287,15 +283,18 @@ def add_food_barcode(req: BarcodeRequest):
             kcal = float(nutriments.get("energy-kcal_100g", 0)) * multiplier
             protein = float(nutriments.get("proteins_100g", 0)) * multiplier
             fat = float(nutriments.get("fat_100g", 0)) * multiplier
-            carbs = float(nutriments.get("carbohydrates_100g", 0)) * multiplier
-            fiber = float(nutriments.get("fiber_100g", 0)) * multiplier
             
-            food_data = {"name": f"📱 {name} ({int(serving)}г)", "kcal": kcal, "protein": protein, "fat": fat, "carbs": carbs, "fiber": fiber, "sugar": 0, "salt": 0}
+            # Віднімаємо клітковину від загальних вуглеводів, щоб отримати чисті
+            total_carbs = float(nutriments.get("carbohydrates_100g", 0)) * multiplier
+            fiber = float(nutriments.get("fiber_100g", 0)) * multiplier
+            net_carbs = max(0, total_carbs - fiber) # Захист від від'ємних значень
+            
+            food_data = {"name": f"📱 {name} ({int(serving)}г)", "kcal": kcal, "protein": protein, "fat": fat, "carbs": net_carbs, "fiber": fiber, "sugar": 0, "salt": 0}
             return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
     except:
         pass 
 
-    prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. Return ONLY valid JSON: name(string in Ukrainian, MUST include estimated weight in grams), kcal, protein, fat, carbs, fiber, sugar, salt(numbers)."
+    prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. Return ONLY valid JSON: name(string in Ukrainian, MUST include estimated weight in grams), kcal, protein, fat, carbs(MUST BE NET CARBS: total minus fiber), fiber, sugar, salt(numbers)."
     try: 
         response = model.generate_content(prompt)
         food_data = clean_json_response(response.text)
