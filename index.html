@@ -297,7 +297,10 @@
             
             <div class="form-group">
                 <label style="color: var(--accent);">✏️ Що це насправді? (Назва і вага)</label>
-                <input type="text" id="cf-name" placeholder="Наприклад: Сметана (50г)">
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="cf-name" placeholder="Наприклад: Сметана (50г)">
+                    <button class="btn-primary" style="width: auto; padding: 0 15px; margin: 0; background: var(--water);" onclick="recalculateFood()">🔄</button>
+                </div>
             </div>
             
             <div class="form-group"><label>Калорії (ккал)</label><input type="number" id="cf-kcal"></div>
@@ -349,7 +352,7 @@
             <div class="modal-header">Тренування <button class="close-btn" onclick="closeModal('add-sport-modal')"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"></path></svg></button></div>
             <div class="form-group">
                 <label>Виберіть активність</label>
-                <select id="exerciseSelect">
+                <select id="exerciseSelect" onchange="toggleCustomExercise()">
                     <option value="🏃‍♂️ Біг (швидкий)">🏃‍♂️ Біг (швидкий)</option>
                     <option value="🏃‍♀️ Біг (повільний / підтюпцем)">🏃‍♀️ Біг (повільний / підтюпцем)</option>
                     <option value="🚶‍♂️ Ходьба (швидка)">🚶‍♂️ Ходьба (швидка)</option>
@@ -363,8 +366,21 @@
                     <option value="💃 Танці">💃 Танці</option>
                     <option value="⚽️ Футбол / Баскетбол">⚽️ Футбол / Баскетбол</option>
                     <option value="🥊 Бокс / Єдиноборства">🥊 Бокс / Єдиноборства</option>
+                    <option value="custom" style="font-weight: bold; color: var(--accent);">✍️ Власне тренування...</option>
                 </select>
             </div>
+            
+            <div id="custom-exercise-fields" style="display: none;">
+                <div class="form-group">
+                    <label>Назва тренування</label>
+                    <input type="text" id="customExerciseName" placeholder="Наприклад: Сноуборд">
+                </div>
+                <div class="form-group">
+                    <label>Спалено калорій</label>
+                    <input type="number" id="customExerciseKcal" placeholder="Наприклад: 400">
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>Тривалість (хвилин)</label>
                 <input type="number" id="exerciseDuration" placeholder="Наприклад: 45">
@@ -607,19 +623,49 @@
             }
         }
 
+        function toggleCustomExercise() {
+            const select = document.getElementById('exerciseSelect').value;
+            const customFields = document.getElementById('custom-exercise-fields');
+            if (select === 'custom') {
+                customFields.style.display = 'block';
+            } else {
+                customFields.style.display = 'none';
+            }
+        }
+
         async function addExercise() {
-            let name = document.getElementById('exerciseSelect').value;
+            let selectValue = document.getElementById('exerciseSelect').value;
             let duration = document.getElementById('exerciseDuration').value;
+            
+            let name = selectValue;
+            let customKcal = null;
+
+            if (selectValue === 'custom') {
+                name = "⚡ " + document.getElementById('customExerciseName').value;
+                customKcal = parseFloat(document.getElementById('customExerciseKcal').value);
+                if (!document.getElementById('customExerciseName').value || !customKcal) {
+                    showToast("Введіть назву та калорії!"); return;
+                }
+            }
+
             if (!duration || duration <= 0) { showToast("Введіть час!"); return; }
 
             document.getElementById('sport-loader').style.display = 'block';
             await fetch(`${API_BASE}/exercise`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), name: name, duration_min: parseInt(duration) })
+                body: JSON.stringify({ 
+                    tg_id: userId, 
+                    date: formatDate(currentDate), 
+                    name: name, 
+                    duration_min: parseInt(duration),
+                    custom_kcal: customKcal
+                })
             });
             document.getElementById('sport-loader').style.display = 'none';
             document.getElementById('exerciseDuration').value = '';
+            document.getElementById('customExerciseName').value = '';
+            document.getElementById('customExerciseKcal').value = '';
             closeModal('add-sport-modal');
             showToast("Тренування додано! 🔥");
             fetchDailyData();
@@ -740,6 +786,39 @@
             document.getElementById('cf-c').value = Math.round(foodData.carbs || 0);
             document.getElementById('cf-fib').value = Math.round(foodData.fiber || 0);
             openModal('confirm-food-modal');
+        }
+
+        async function recalculateFood() {
+            const text = document.getElementById('cf-name').value;
+            if (!text) return;
+
+            const btn = document.querySelector('button[onclick="recalculateFood()"]');
+            const oldText = btn.innerHTML;
+            btn.innerHTML = '⏳';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/food/text`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ tg_id: userId, date: formatDate(currentDate), text: text })
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success' && data.food) {
+                    document.getElementById('cf-name').value = data.food.name || text;
+                    document.getElementById('cf-kcal').value = Math.round(data.food.kcal || 0);
+                    document.getElementById('cf-p').value = Math.round(data.food.protein || 0);
+                    document.getElementById('cf-f').value = Math.round(data.food.fat || 0);
+                    document.getElementById('cf-c').value = Math.round(data.food.carbs || 0);
+                    document.getElementById('cf-fib').value = Math.round(data.food.fiber || 0);
+                    showToast("✅ Перераховано!");
+                }
+            } catch(e) {
+                showToast("Помилка перерахунку");
+            }
+            
+            btn.innerHTML = oldText;
+            btn.disabled = false;
         }
 
         async function saveConfirmedFood() {
