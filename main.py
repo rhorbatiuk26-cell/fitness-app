@@ -1,8 +1,10 @@
 import os
 import json
 import requests
+import asyncio
+import re
 from pathlib import Path
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from typing import List, Optional, Dict
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
@@ -104,6 +106,21 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
+BOT_TOKEN = os.getenv("BOT_TOKEN") 
+
+# --- ДОДАНО: Надійний парсер JSON ---
+def clean_json_response(text):
+    try:
+        # Спочатку пробуємо просто почистити стандартні теги
+        clean_text = text.replace('```json', '').replace('```', '').strip()
+        return json.loads(clean_text)
+    except:
+        # Якщо не вийшло, шукаємо перший-ліпший JSON об'єкт через регулярку
+        match = re.search(r'(\{.*?\}|\[.*?\])', text, re.DOTALL)
+        if match:
+            try: return json.loads(match.group(1))
+            except: pass
+    return None
 
 # --- Схеми ---
 class ProfileData(BaseModel): tg_id: str; goal: str; weight: float; target_weight: float; height: float; age: int
@@ -122,7 +139,7 @@ def update_profile(data: ProfileData):
     prompt = f"Calculate daily nutritional norms for a person with: Age {data.age}, Height {data.height}cm, Weight {data.weight}kg, Target Weight {data.target_weight}kg, Goal: {data.goal}. Limits: Sugar up to 50g, Salt up to 5g. Return ONLY a valid JSON with keys: kcal, protein, fat, carbs (MUST BE NET CARBS, excluding fiber), sugar, salt, fiber (calculate separately, approx 14g per 1000 kcal)."
     try:
         response = model.generate_content(prompt)
-        norms = json.loads(response.text.strip('` \njson'))
+        norms = clean_json_response(response.text) or {"kcal": 2000, "protein": 100, "fat": 60, "carbs": 200, "sugar": 50, "salt": 5, "fiber": 28}
     except:
         norms = {"kcal": 2000, "protein": 100, "fat": 60, "carbs": 200, "sugar": 50, "salt": 5, "fiber": 28}
 
@@ -179,6 +196,20 @@ def get_progress(tg_id: str):
     db.close()
     return {"dates": list(progress_data.keys()), "kcal": list(progress_data.values())}
 
+@app.get("/api/progress/weight/{tg_id}")
+def get_weight_progress(tg_id: str):
+    db = SessionLocal()
+    end_date = date.today()
+    start_date = end_date - timedelta(days=30)
+    logs = db.query(WeightLog).filter(WeightLog.tg_id == tg_id, WeightLog.log_date >= start_date, WeightLog.log_date <= end_date).order_by(WeightLog.log_date).all()
+    
+    weight_dict = {}
+    for w in logs:
+        weight_dict[w.log_date.strftime("%Y-%m-%d")] = w.weight
+        
+    db.close()
+    return {"dates": list(weight_dict.keys()), "weights": list(weight_dict.values())}
+
 @app.get("/api/foods/recent/{tg_id}")
 def get_recent_foods(tg_id: str):
     db = SessionLocal()
@@ -204,19 +235,41 @@ def add_food_direct(req: DirectFoodRequest):
 
 @app.post("/api/food/text")
 def add_food_text(req: TextFoodRequest):
-    prompt = f"Analyze food: '{req.text}'. Estimate portion size in grams if not specified. Return ONLY valid JSON: keys name(string in Ukrainian, MUST include estimated weight in grams at the end, e.g., 'Омлет (150г)'), kcal, protein, fat, carbs (MUST BE NET CARBS ONLY, completely separate from fiber), fiber (calculated completely separately), sugar, salt (numbers). No markdown."
-    response = model.generate_content(prompt)
-    food_data = json.loads(response.text.strip('` \njson'))
-    if isinstance(food_data, list): food_data = food_data[0] if food_data else {}
-    return {"status": "success", "food": food_data}
+    prompt = f"Calculate exact macros for: '{req.text}'. Assume standard serving in grams if not specified. Return ONLY a valid JSON object (no extra text) with keys: \"name\" (string, include weight in brackets), \"kcal\", \"protein\", \"fat\", \"carbs\", \"fiber\", \"sugar\", \"salt\" (all numbers)."
+    try:
+        response = model.generate_content(prompt)
+        food_data = clean_json_response(response.text)
+        
+        if isinstance(food_data, list): 
+            food_data = food_data[0] if food_data else None
+            
+        if not food_data:
+            raise Exception("Invalid JSON returned from AI")
+            
+        return {"status": "success", "food": food_data}
+    except Exception as e:
+        # Безпечний резерв, якщо ШІ заплутався
+        fallback = {"name": f"{req.text} (помилка ШІ)", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
+        return {"status": "success", "food": fallback}
 
 @app.post("/api/food/photo")
 async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file: UploadFile = File(...)):
     contents = await file.read()
-    response = model.generate_content(["Analyze food image. Estimate portion size in grams. Return ONLY valid JSON: name(string in Ukrainian, MUST include estimated weight in grams at the end, e.g., 'Салат (200г)'), kcal, protein, fat, carbs (MUST BE NET CARBS ONLY, completely separate from fiber), fiber (calculated completely separately), sugar, salt(numbers). No markdown.", {"mime_type": file.content_type, "data": contents}])
-    food_data = json.loads(response.text.strip('` \njson'))
-    if isinstance(food_data, list): food_data = food_data[0] if food_data else {}
-    return {"status": "success", "data": food_data}
+    prompt = "Analyze food image. Estimate portion size in grams. Return ONLY a valid JSON object (no markdown) with keys: \"name\" (string in Ukrainian, include weight in brackets), \"kcal\", \"protein\", \"fat\", \"carbs\", \"fiber\", \"sugar\", \"salt\" (all numbers)."
+    try:
+        response = model.generate_content([prompt, {"mime_type": file.content_type, "data": contents}])
+        food_data = clean_json_response(response.text)
+        
+        if isinstance(food_data, list): 
+            food_data = food_data[0] if food_data else None
+            
+        if not food_data:
+            raise Exception("Invalid JSON returned from AI")
+            
+        return {"status": "success", "data": food_data}
+    except Exception as e:
+        fallback = {"name": "Не вдалося розпізнати", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
+        return {"status": "success", "data": fallback}
 
 @app.post("/api/food/barcode")
 def add_food_barcode(req: BarcodeRequest):
@@ -241,11 +294,12 @@ def add_food_barcode(req: BarcodeRequest):
     except:
         pass 
 
-    prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. If unknown, return generic 'Невідомий продукт' with 0 macros. Return ONLY valid JSON: name(string in Ukrainian, MUST include estimated weight in grams, e.g., 'Шоколад (100г)'), kcal, protein, fat, carbs (MUST BE NET CARBS ONLY, completely separate from fiber), fiber (calculated completely separately), sugar, salt(numbers). No markdown."
-    response = model.generate_content(prompt)
+    prompt = f"User scanned a barcode: {req.barcode}. If you guess the product, return info. Return ONLY valid JSON: name(string in Ukrainian, MUST include estimated weight in grams), kcal, protein, fat, carbs, fiber, sugar, salt(numbers)."
     try: 
-        food_data = json.loads(response.text.strip('` \njson'))
-        if isinstance(food_data, list): food_data = food_data[0] if food_data else {}
+        response = model.generate_content(prompt)
+        food_data = clean_json_response(response.text)
+        if isinstance(food_data, list): food_data = food_data[0] if food_data else None
+        if not food_data: raise Exception()
     except: 
         food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
     return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
@@ -300,6 +354,29 @@ def ai_chat(req: ChatMessage):
     prompt = f"Ти професійний дієтолог FitLio. Контекст розмови:\n{context}\nКористувач каже: {req.message}. Дай коротку і корисну відповідь українською."
     response = model.generate_content(prompt)
     return {"reply": response.text}
+
+async def smart_reminders_task():
+    while True:
+        now = datetime.now()
+        if now.hour == 20 and now.minute == 0:
+            if BOT_TOKEN:
+                db = SessionLocal()
+                today = date.today()
+                users = db.query(User).all()
+                for user in users:
+                    water_logs = db.query(WaterLog).filter(WaterLog.tg_id == user.tg_id, WaterLog.log_date == today).all()
+                    total_water = sum([w.amount_ml for w in water_logs])
+                    if total_water < 2000:
+                        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                        payload = {"chat_id": user.tg_id, "text": "💧 Гей! Ти сьогодні випив мало води. Час зробити ковток!"}
+                        try: requests.post(url, json=payload, timeout=5)
+                        except: pass
+                db.close()
+        await asyncio.sleep(60)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(smart_reminders_task())
 
 if __name__ == "__main__":
     import uvicorn
