@@ -44,7 +44,7 @@ class User(Base):
     norm_kcal = Column(Float)
     norm_p = Column(Float)
     norm_f = Column(Float)
-    norm_c = Column(Float) # Чисті вуглеводи
+    norm_c = Column(Float)
     norm_sugar = Column(Float)
     norm_salt = Column(Float)
     norm_fiber = Column(Float, default=28.0)
@@ -62,7 +62,7 @@ class FoodLog(Base):
     kcal = Column(Float)
     protein = Column(Float)
     fat = Column(Float)
-    carbs = Column(Float) # Чисті вуглеводи
+    carbs = Column(Float)
     sugar = Column(Float)
     salt = Column(Float)
     fiber = Column(Float, default=0.0) 
@@ -92,7 +92,7 @@ class WeightLog(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# БЕЗПЕЧНА МІГРАЦІЯ (Використовуємо Exception, щоб не падав Postgres на Railway)
+# БЕЗПЕЧНА МІГРАЦІЯ
 with engine.connect() as conn:
     try: conn.execute(text("ALTER TABLE food_logs ADD COLUMN fiber FLOAT DEFAULT 0.0")); conn.commit()
     except Exception: pass
@@ -108,9 +108,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash')
-
 BOT_TOKEN = os.getenv("BOT_TOKEN") 
-# ВПИШИ СЮДИ ЮЗЕРНЕЙМ СВОГО БОТА БЕЗ @ (наприклад: "MyFitLio_bot")
+# ЗАМІНИ НА ЮЗЕРНЕЙМ СВОГО БОТА (без @)
 BOT_USERNAME = "fitlio_final_ai_bot" 
 
 def clean_json_response(text):
@@ -127,7 +126,6 @@ def clean_json_response(text):
 class ProfileData(BaseModel): tg_id: str; goal: str; weight: float; target_weight: float; height: float; age: int
 class ManualNorms(BaseModel): tg_id: str; kcal: float; protein: float; fat: float; carbs: float; sugar: float; salt: float; fiber: float
 class TextFoodRequest(BaseModel): tg_id: str; date: date; text: str
-class BarcodeRequest(BaseModel): tg_id: str; date: date; barcode: str
 class DirectFoodRequest(BaseModel): tg_id: str; date: date; food: dict
 class ExerciseRequest(BaseModel): tg_id: str; date: date; name: str; duration_min: int; custom_kcal: Optional[float] = None
 class WeightRequest(BaseModel): tg_id: str; date: date; weight: float
@@ -170,18 +168,15 @@ async def telegram_webhook(request: Request):
                 
                 # Кнопка для відкриття Mini App
                 keyboard = {"inline_keyboard": [[{"text": "Відкрити FitLio Pro 🍏", "web_app": {"url": "https://fitness-app-production-b4a3.up.railway.app/"}}]]}
-                
-                # Гарне привітання
                 welcome_text = (
                     "👋 <b>Вітаю у FitLio Pro!</b>\n\n"
                     "Я твій розумний AI-щоденник харчування та тренувань. Що я вмію:\n\n"
-                    "📸 <b>Розпізнавати їжу по фото:</b> просто сфотографуй тарілку, а я порахую калорії та БЖВ (включно з чистими вуглеводами та клітковиною).\n"
-                    "🎯 <b>Персональні норми:</b> розрахую твою ідеальну норму для досягнення цілі.\n"
+                    "📸 <b>Розпізнавати їжу по фото:</b> просто сфотографуй тарілку, а я порахую калорії та БЖВ.\n"
+                    "🎯 <b>Персональні норми:</b> розрахую твою ідеальну норму для схуднення чи набору маси.\n"
                     "🏃‍♂️ <b>Трекінг активності:</b> записуй тренування та воду в один клік.\n\n"
                     "🎁 <i>Тобі автоматично нараховано 3 дні безкоштовного PRO-доступу!</i>\n\n"
                     "Тисни кнопку нижче, щоб налаштувати свій профіль і почати 👇"
                 )
-                
                 requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
                     "chat_id": tg_id, 
                     "text": welcome_text,
@@ -393,33 +388,6 @@ async def add_food_photo(tg_id: str = Form(...), date_str: str = Form(...), file
         return {"status": "success", "data": food_data}
     except:
         return {"status": "success", "data": {"name": "Не вдалося розпізнати", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}}
-
-@app.post("/api/food/barcode")
-def add_food_barcode(req: BarcodeRequest):
-    url = f"https://world.openfoodfacts.org/api/v0/product/{req.barcode}.json"
-    try:
-        resp = requests.get(url, timeout=5).json()
-        if resp.get("status") == 1:
-            product = resp["product"]
-            name = product.get("product_name_uk") or product.get("product_name_ru") or product.get("product_name") or "Невідомий продукт"
-            serving = float(product.get("serving_quantity", 100))
-            multiplier = serving / 100.0
-            nutriments = product.get("nutriments", {})
-            kcal = float(nutriments.get("energy-kcal_100g", 0)) * multiplier
-            protein = float(nutriments.get("proteins_100g", 0)) * multiplier
-            fat = float(nutriments.get("fat_100g", 0)) * multiplier
-            total_carbs = float(nutriments.get("carbohydrates_100g", 0)) * multiplier
-            fiber = float(nutriments.get("fiber_100g", 0)) * multiplier
-            net_carbs = max(0, total_carbs - fiber)
-            return {"status": "success", "name": f"📱 {name} ({int(serving)}г)", "kcal": kcal, "food": {"name": f"📱 {name} ({int(serving)}г)", "kcal": kcal, "protein": protein, "fat": fat, "carbs": net_carbs, "fiber": fiber, "sugar": 0, "salt": 0}}
-    except: pass 
-    prompt = f"User scanned a barcode: {req.barcode}. Return valid JSON: name(string in Ukrainian with weight), kcal, protein, fat, carbs(NET CARBS), fiber, sugar, salt(numbers)."
-    try: 
-        response = model.generate_content(prompt); food_data = clean_json_response(response.text)
-        if isinstance(food_data, list): food_data = food_data[0] if food_data else None
-        if not food_data: raise Exception()
-    except: food_data = {"name": f"Продукт {req.barcode}", "kcal": 0, "protein": 0, "fat": 0, "carbs": 0, "fiber": 0, "sugar": 0, "salt": 0}
-    return {"status": "success", "name": food_data["name"], "kcal": food_data["kcal"], "food": food_data}
 
 @app.delete("/api/food/{food_id}")
 def delete_food(food_id: int):
